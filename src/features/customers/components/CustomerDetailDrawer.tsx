@@ -1,4 +1,4 @@
-import { Drawer, Avatar, Tabs, Table, Descriptions, Button, message } from 'antd';
+import { Drawer, Avatar, Tabs, Table, Descriptions, Button } from 'antd';
 import { UserOutlined, EditOutlined, CalendarOutlined, DollarOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { Customer } from '@/types/customer.types';

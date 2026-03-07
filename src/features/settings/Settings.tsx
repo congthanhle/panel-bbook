@@ -1,4 +1,4 @@
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import { Tabs } from 'antd';
 import { Building2, CalendarRange, Bell, UserCog } from 'lucide-react';
 import { PageWrapper } from '@/components/layout/PageWrapper';
