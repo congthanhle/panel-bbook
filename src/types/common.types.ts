@@ -1,0 +1,20 @@
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface ApiError {
+  message: string;
+  code: string;
+  details?: Record<string, string[]>;
+}
+
+export interface RouteConfig {
+  path: string;
+  element: React.ReactNode;
+  roles?: import('./auth.types').Role[];
+  children?: RouteConfig[];
+}
