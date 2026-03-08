@@ -1,11 +1,10 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { Card, Input, Button, Form, Checkbox, App } from 'antd';
 import { LogIn, User, LockKeyhole } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const Login = () => {
   const { login, isLoading } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const { message } = App.useApp();
 
@@ -13,14 +12,11 @@ const Login = () => {
 
   const onFinish = async (values: any) => {
     const { email, password } = values;
-    const result = await login({ email, password });
+    const result = await login({ email, password }, from);
     
     if (result.success) {
       message.success('Welcome back to CourtOS');
-      navigate(from, { replace: true });
     }
-    // Note: useAuth already handles setting state errors, which can be hooked into UI if preferred.
-    // The hook also has an error state if we want to display it in the component.
   };
 
   return (

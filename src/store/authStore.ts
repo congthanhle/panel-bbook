@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User, Role, Permission } from '@/types/auth.types';
+import { authApi } from '@/features/auth/api';
+import { NavigateFunction } from 'react-router-dom';
 
-// Role capability mapping
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   admin: [
     Permission.VIEW_STAFF_ALL,
@@ -24,13 +25,12 @@ interface AuthStoreState {
   error: string | null;
   
   // Actions
-  setAuth: (user: User, token: string) => void;
-  logout: () => void;
-  restoreSession: () => void; // Optional if persist handles it, but good for manual checks
+  login: (email: string, password: string, navigate: NavigateFunction, redirectUrl?: string) => Promise<void>;
+  logout: (navigate?: NavigateFunction) => Promise<void>;
+  restoreSession: (navigate: NavigateFunction) => Promise<void>;
+  
   hasRole: (roles: Role[]) => boolean;
   hasPermission: (permission: Permission) => boolean;
-  setLoading: (isLoading: boolean) => void;
-  setError: (error: string | null) => void;
 }
 
 export const useAuthStore = create<AuthStoreState>()(
@@ -42,20 +42,50 @@ export const useAuthStore = create<AuthStoreState>()(
       isLoading: false,
       error: null,
 
-      setAuth: (user, token) => {
-        set({ user, token, isAuthenticated: !!token, error: null });
+      login: async (email, password, navigate, redirectUrl = '/dashboard') => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authApi.login(email, password);
+          set({
+            token: response.access_token,
+            user: response.user,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+          navigate(redirectUrl, { replace: true });
+        } catch (error: any) {
+          set({
+            error: error.message || 'Login failed',
+            isLoading: false,
+          });
+        }
       },
 
-      logout: () => {
-        set({ user: null, token: null, isAuthenticated: false, error: null });
+      restoreSession: async (navigate) => {
+        const { token } = get();
+        if (!token) {
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        try {
+          const user = await authApi.getMe();
+          set({ user, isAuthenticated: true });
+        } catch (error) {
+          // Interceptor handles 401 redirects, but clear unpersisted state just in case
+          set({ token: null, user: null, isAuthenticated: false });
+        }
       },
 
-      restoreSession: () => {
-        // Since we are using persist middleware, the state is hydrated automatically.
-        // This function can be used to validate the token with the backend if needed in the future.
-        const state = get();
-        if (state.token && !state.isAuthenticated) {
-           set({ isAuthenticated: true });
+      logout: async (navigate) => {
+        try {
+          await authApi.logout();
+        } catch (e) {
+          // Fire and forget, ignore errors
+        }
+        set({ token: null, user: null, isAuthenticated: false });
+        if (navigate) {
+          navigate('/login', { replace: true });
         }
       },
 
@@ -72,17 +102,10 @@ export const useAuthStore = create<AuthStoreState>()(
         const userPermissions = ROLE_PERMISSIONS[user.role] || [];
         return userPermissions.includes(permission);
       },
-
-      setLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error }),
     }),
     {
-      name: 'courtos-auth', // localStorage key
-      partialize: (state) => ({ 
-        user: state.user, 
-        token: state.token, 
-        isAuthenticated: state.isAuthenticated 
-      }), // Only persist these fields
+      name: 'courtos-auth',
+      partialize: (state) => ({ token: state.token }), // Only persist token
     }
   )
 );

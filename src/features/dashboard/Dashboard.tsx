@@ -69,7 +69,7 @@ const Dashboard: React.FC = () => {
   return (
     <PageWrapper
       title="Dashboard"
-      subtitle={`Welcome back, ${user?.firstName}!`}
+      subtitle={`Welcome back, ${user?.name}!`}
       action={
         isAdmin ? (
           <Select

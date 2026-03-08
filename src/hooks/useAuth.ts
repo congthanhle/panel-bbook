@@ -1,31 +1,19 @@
 import { useAuthStore } from '@/store/authStore';
 import { LoginPayload } from '@/types/auth.types';
-import axios from '@/lib/axios';
-import { App } from 'antd';
+import { useNavigate } from 'react-router-dom';
 
 export const useAuth = () => {
   const store = useAuthStore();
-  const { message } = App.useApp();
+  const navigate = useNavigate();
 
-  const login = async (payload: LoginPayload) => {
-    store.setLoading(true);
-    store.setError(null);
-    try {
-      const { data } = await axios.post('/api/auth/login', payload);
-      store.setAuth(data.user, data.token);
-      return { success: true };
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
-      store.setError(errorMessage);
-      return { success: false, error: errorMessage };
-    } finally {
-      store.setLoading(false);
-    }
+  const login = async (payload: LoginPayload, redirectUrl?: string) => {
+    await store.login(payload.email, payload.password || '', navigate, redirectUrl);
+    const { error } = useAuthStore.getState();
+    return { success: !error };
   };
 
   const logout = () => {
-    store.logout();
-    message.info('You have been logged out.');
+    store.logout(navigate);
   };
 
   const isAdmin = store.user?.role === 'admin';

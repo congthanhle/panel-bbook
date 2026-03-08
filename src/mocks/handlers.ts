@@ -12,8 +12,7 @@ import { Shift } from '@/types/shift.types';
 const mockUser: User = {
   id: 'usr_1',
   email: 'admin@courtos.com',
-  firstName: 'Admin',
-  lastName: 'User',
+  name: 'Admin User',
   role: 'admin',
 };
 
@@ -113,8 +112,7 @@ const mockShifts: Shift[] = [
 const mockStaffUser: User = {
   id: 'usr_2',
   email: 'staff@courtos.vn',
-  firstName: 'John',
-  lastName: 'Doe',
+  name: 'John Doe',
   role: 'staff',
 };
 
@@ -129,14 +127,16 @@ export const handlers = [
     if (body.email === 'staff@courtos.vn') {
       return HttpResponse.json({
         user: mockStaffUser,
-        token: 'mock-jwt-token-staff-456',
+        access_token: 'mock-jwt-token-staff-456',
+        expires_in: 3600,
       });
     }
 
     // Default to admin
     return HttpResponse.json({
       user: mockUser,
-      token: 'mock-jwt-token-admin-123',
+      access_token: 'mock-jwt-token-admin-123',
+      expires_in: 3600,
     });
   }),
   

@@ -15,7 +15,7 @@ const Staff = () => {
     {
       title: 'Name',
       key: 'name',
-      render: (_: any, record: any) => `${record.firstName} ${record.lastName}`,
+      render: (_: any, record: any) => record.name,
     },
     {
       title: 'Email',

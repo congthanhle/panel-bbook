@@ -10,8 +10,7 @@ export enum Permission {
 
 export interface User {
   id: string;
-  firstName: string;
-  lastName: string;
+  name: string;
   email: string;
   role: Role;
   avatarUrl?: string; // Updated from avatar
@@ -27,8 +26,9 @@ export interface AuthState {
 }
 
 export interface AuthResponse {
+  access_token: string;
+  expires_in: number;
   user: User;
-  token: string;
 }
 
 export interface LoginPayload {

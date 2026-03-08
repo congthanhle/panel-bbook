@@ -20,8 +20,7 @@ export const AppShell = () => {
   const location = useLocation();
 
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    logout(navigate);
   };
 
   const menuItems = [
@@ -81,7 +80,7 @@ export const AppShell = () => {
           />
           <div className="flex items-center gap-4">
             <span className="text-sm font-medium text-slate-700">
-              {user?.firstName} {user?.lastName} {user?.role ? `(${user.role})` : ''}
+              {user?.name} {user?.role ? `(${user.role})` : ''}
             </span>
             <Button type="text" danger icon={<LogOut size={18} />} onClick={handleLogout}>
               Logout

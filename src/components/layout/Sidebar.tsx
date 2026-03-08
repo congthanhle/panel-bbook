@@ -169,7 +169,7 @@ export const Sidebar = () => {
             {!sidebarCollapsed && (
               <div className="ml-3 truncate">
                 <p className="text-sm font-medium text-white mb-0 leading-tight truncate">
-                  {user?.firstName} {user?.lastName}
+                  {user?.name}
                 </p>
                 <p className="text-xs text-slate-400 capitalize mb-0 truncate">{user?.role}</p>
               </div>

@@ -92,7 +92,7 @@ export const Header = () => {
               {user?.avatarUrl ? (
                 <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
-                <span className="font-semibold text-sm">{user?.firstName?.charAt(0) || 'U'}</span>
+                <span className="font-semibold text-sm">{user?.name?.charAt(0) || 'U'}</span>
               )}
             </div>
           </div>
