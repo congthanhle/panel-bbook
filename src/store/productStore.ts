@@ -23,7 +23,7 @@ export const useProductStore = create<ProductState>((set) => ({
   fetchProducts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/api/products`);
+      const response = await axios.get(`${API_URL}/products`);
       set({ products: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch products', isLoading: false });
@@ -33,7 +33,7 @@ export const useProductStore = create<ProductState>((set) => ({
   createProduct: async (productData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`${API_URL}/api/products`, productData);
+      const response = await axios.post(`${API_URL}/products`, productData);
       set((state) => ({
         products: [...state.products, response.data],
         isLoading: false,
@@ -47,7 +47,7 @@ export const useProductStore = create<ProductState>((set) => ({
   updateProduct: async (id, productData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`${API_URL}/api/products/${id}`, productData);
+      const response = await axios.patch(`${API_URL}/products/${id}`, productData);
       set((state) => ({
         products: state.products.map((p) =>
           p.id === id ? response.data : p
@@ -63,7 +63,7 @@ export const useProductStore = create<ProductState>((set) => ({
   deleteProduct: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/api/products/${id}`);
+      await axios.delete(`${API_URL}/products/${id}`);
       set((state) => ({
         products: state.products.filter((p) => p.id !== id),
         isLoading: false,

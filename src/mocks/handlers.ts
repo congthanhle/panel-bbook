@@ -119,7 +119,7 @@ const mockStaffUser: User = {
 const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const handlers = [
-  http.post(`${API_URL}/api/auth/login`, async ({ request }) => {
+  http.post(`${API_URL}/auth/login`, async ({ request }) => {
     await delay(800);
     const body = await request.json() as any;
     
@@ -140,17 +140,17 @@ export const handlers = [
     });
   }),
   
-  http.get(`${API_URL}/api/auth/me`, async () => {
+  http.get(`${API_URL}/auth/me`, async () => {
     await delay(400);
     return HttpResponse.json(mockUser);
   }),
 
-  http.get(`${API_URL}/api/courts`, async () => {
+  http.get(`${API_URL}/courts`, async () => {
     await delay(600);
     return HttpResponse.json(mockCourts);
   }),
 
-  http.patch(`${API_URL}/api/courts/:id/status`, async ({ params, request }) => {
+  http.patch(`${API_URL}/courts/:id/status`, async ({ params, request }) => {
     const { id } = params;
     const body = await request.json() as { status: string };
     
@@ -163,16 +163,16 @@ export const handlers = [
     return HttpResponse.json({ success: true });
   }),
 
-  http.get(`${API_URL}/api/staff`, () => {
+  http.get(`${API_URL}/staff`, () => {
     return HttpResponse.json(mockStaff);
   }),
 
-  http.get(`${API_URL}/api/staff/me`, async () => {
+  http.get(`${API_URL}/staff/me`, async () => {
     await delay(400);
     return HttpResponse.json(mockStaff[0]);
   }),
 
-  http.post(`${API_URL}/api/staff`, async ({ request }) => {
+  http.post(`${API_URL}/staff`, async ({ request }) => {
     await delay(600);
     const body = await request.json() as Omit<Staff, 'id'>;
     const newStaff: Staff = {
@@ -184,7 +184,7 @@ export const handlers = [
     return HttpResponse.json(newStaff);
   }),
 
-  http.patch(`${API_URL}/api/staff/:id`, async ({ params, request }) => {
+  http.patch(`${API_URL}/staff/:id`, async ({ params, request }) => {
     await delay(600);
     const { id } = params;
     const body = await request.json() as Partial<Staff>;
@@ -197,7 +197,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.delete(`${API_URL}/api/staff/:id`, async ({ params }) => {
+  http.delete(`${API_URL}/staff/:id`, async ({ params }) => {
     await delay(600);
     const { id } = params;
     const staffIndex = mockStaff.findIndex(s => s.id === id);
@@ -209,7 +209,7 @@ export const handlers = [
   }),
 
   // -- Shifts Handlers --
-  http.get(`${API_URL}/api/shifts`, async ({ request }) => {
+  http.get(`${API_URL}/shifts`, async ({ request }) => {
     await delay(500);
     const url = new URL(request.url);
     const month = url.searchParams.get('month'); // YYYY-MM
@@ -221,13 +221,13 @@ export const handlers = [
     return HttpResponse.json(mockShifts);
   }),
 
-  http.get(`${API_URL}/api/shifts/my`, async () => {
+  http.get(`${API_URL}/shifts/my`, async () => {
     await delay(500);
     const myShifts = mockShifts.filter(s => s.assignedStaff.some(staff => staff.userId === mockStaffUser.id));
     return HttpResponse.json(myShifts);
   }),
 
-  http.post(`${API_URL}/api/shifts`, async ({ request }) => {
+  http.post(`${API_URL}/shifts`, async ({ request }) => {
     await delay(600);
     const body = await request.json() as Omit<Shift, 'id' | 'status' | 'assignedStaff'> & { staffIds: string[] };
     const { staffIds, ...shiftData } = body;
@@ -244,7 +244,7 @@ export const handlers = [
     return HttpResponse.json(newShift);
   }),
 
-  http.patch(`${API_URL}/api/shifts/:id`, async ({ params, request }) => {
+  http.patch(`${API_URL}/shifts/:id`, async ({ params, request }) => {
     await delay(600);
     const { id } = params;
     const body = await request.json() as Partial<Shift> & { staffIds?: string[] };
@@ -261,7 +261,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.delete(`${API_URL}/api/shifts/:id`, async ({ params }) => {
+  http.delete(`${API_URL}/shifts/:id`, async ({ params }) => {
      await delay(600);
     const { id } = params;
     const shiftIndex = mockShifts.findIndex(s => s.id === id);
@@ -272,7 +272,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.post(`${API_URL}/api/shifts/:id/assign`, async ({ params, request }) => {
+  http.post(`${API_URL}/shifts/:id/assign`, async ({ params, request }) => {
     await delay(400);
     const { id } = params;
     const { staffId } = await request.json() as { staffId: string };
@@ -288,7 +288,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.post(`${API_URL}/api/shifts/:id/remove`, async ({ params, request }) => {
+  http.post(`${API_URL}/shifts/:id/remove`, async ({ params, request }) => {
     await delay(400);
     const { id } = params;
     const { staffId } = await request.json() as { staffId: string };
@@ -301,7 +301,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.patch(`${API_URL}/api/shifts/:id/status`, async ({ params, request }) => {
+  http.patch(`${API_URL}/shifts/:id/status`, async ({ params, request }) => {
     await delay(400);
     const { id } = params;
     const { status } = await request.json() as { status: Shift['status'] };
@@ -314,7 +314,7 @@ export const handlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.get(`${API_URL}/api/dashboard/stats`, async () => {
+  http.get(`${API_URL}/dashboard/stats`, async () => {
     await delay(600);
     // You can parse url search params for date ranges if needed:
     // const url = new URL(request.url);

@@ -31,7 +31,7 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const response = await axios.get(`${API_URL}/api/dashboard/stats`, {
+        const response = await axios.get(`${API_URL}/dashboard/stats`, {
           params: { range: dateRange }
         });
         setData(response.data);

@@ -51,12 +51,12 @@ export const mockProducts: Product[] = [
 ];
 
 export const productHandlers = [
-  http.get(`${API_URL}/api/products`, async () => {
+  http.get(`${API_URL}/products`, async () => {
     await delay(500);
     return HttpResponse.json(mockProducts);
   }),
 
-  http.post(`${API_URL}/api/products`, async ({ request }) => {
+  http.post(`${API_URL}/products`, async ({ request }) => {
     await delay(600);
     const body = await request.json() as Partial<Product>;
     
@@ -75,7 +75,7 @@ export const productHandlers = [
     return HttpResponse.json(newProduct, { status: 201 });
   }),
 
-  http.patch(`${API_URL}/api/products/:id`, async ({ params, request }) => {
+  http.patch(`${API_URL}/products/:id`, async ({ params, request }) => {
     await delay(600);
     const { id } = params;
     const body = await request.json() as Partial<Product>;
@@ -88,7 +88,7 @@ export const productHandlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.delete(`${API_URL}/api/products/:id`, async ({ params }) => {
+  http.delete(`${API_URL}/products/:id`, async ({ params }) => {
     await delay(600);
     const { id } = params;
     const index = mockProducts.findIndex((p) => p.id === id);

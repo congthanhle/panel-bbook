@@ -83,7 +83,7 @@ const generateMockSlots = (dateString: string): Record<string, SlotCell> => {
 let currentSlotsByDate: Record<string, Record<string, SlotCell>> = {};
 
 export const overviewHandlers = [
-  http.get(`${API_URL}/api/overview`, ({ request }) => {
+  http.get(`${API_URL}/overview`, ({ request }) => {
     const url = new URL(request.url);
     const date = url.searchParams.get('date') || dayjs().format('YYYY-MM-DD');
 
@@ -106,7 +106,7 @@ export const overviewHandlers = [
     return HttpResponse.json(data);
   }),
 
-  http.patch(`${API_URL}/api/slots/lock`, async ({ request }) => {
+  http.patch(`${API_URL}/slots/lock`, async ({ request }) => {
     const payload = await request.json() as { courtId: string, timeSlotId: string, action: 'lock'|'unlock', date?: string };
     const date = payload.date || dayjs().format('YYYY-MM-DD'); // Ideally frontend sends date
     const key = `${payload.courtId}_${payload.timeSlotId}`;
@@ -118,7 +118,7 @@ export const overviewHandlers = [
     return HttpResponse.json({ success: true });
   }),
 
-  http.patch(`${API_URL}/api/slots/bulk`, async ({ request }) => {
+  http.patch(`${API_URL}/slots/bulk`, async ({ request }) => {
     const payload = await request.json() as { slots: string[], action: 'lock'|'unlock', date?: string };
     const date = payload.date || dayjs().format('YYYY-MM-DD'); // Ideally frontend sends date
     
@@ -138,7 +138,7 @@ export const overviewHandlers = [
   }),
 
   // Add booking mock handler
-  http.post(`${API_URL}/api/bookings`, async ({ request }) => {
+  http.post(`${API_URL}/bookings`, async ({ request }) => {
     const payload = await request.json() as CreateBookingPayload;
     const date = dayjs().format('YYYY-MM-DD'); 
     
@@ -166,7 +166,7 @@ export const overviewHandlers = [
   }),
 
   // Cancel booking mock handler
-  http.patch(`${API_URL}/api/bookings/cancel`, async ({ request }) => {
+  http.patch(`${API_URL}/bookings/cancel`, async ({ request }) => {
     const payload = await request.json() as { courtId: string, timeSlotId: string, action: 'unlock', date?: string, reason?: string };
     const date = payload.date || dayjs().format('YYYY-MM-DD'); 
     const key = `${payload.courtId}_${payload.timeSlotId}`;

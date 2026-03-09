@@ -63,12 +63,12 @@ export const mockCustomers: Customer[] = [
 ];
 
 export const customerHandlers = [
-  http.get(`${API_URL}/api/customers`, async () => {
+  http.get(`${API_URL}/customers`, async () => {
     await delay(600);
     return HttpResponse.json(mockCustomers);
   }),
 
-  http.post(`${API_URL}/api/customers`, async ({ request }) => {
+  http.post(`${API_URL}/customers`, async ({ request }) => {
     await delay(600);
     const body = await request.json() as Partial<Customer>;
     
@@ -91,7 +91,7 @@ export const customerHandlers = [
     return HttpResponse.json(newCustomer, { status: 201 });
   }),
 
-  http.patch(`${API_URL}/api/customers/:id`, async ({ params, request }) => {
+  http.patch(`${API_URL}/customers/:id`, async ({ params, request }) => {
     await delay(600);
     const { id } = params;
     const body = await request.json() as Partial<Customer>;
@@ -104,7 +104,7 @@ export const customerHandlers = [
     return new HttpResponse(null, { status: 404 });
   }),
 
-  http.delete(`${API_URL}/api/customers/:id`, async ({ params }) => {
+  http.delete(`${API_URL}/customers/:id`, async ({ params }) => {
     await delay(600);
     const { id } = params;
     const index = mockCustomers.findIndex((c) => c.id === id);
