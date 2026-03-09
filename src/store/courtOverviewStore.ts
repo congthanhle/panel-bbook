@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import dayjs, { Dayjs } from 'dayjs';
 import { SlotCell, SingleActionPayload, BulkActionPayload, Court, OperatingHours, CreateBookingPayload } from '@/types/overview.types';
 import axios from 'axios';
+import { message } from 'antd';
+import { overviewApi } from '@/features/court-overview/api';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
@@ -82,30 +84,41 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
   },
 
   toggleLockSlot: async (payload) => {
+    const { courtId, timeSlotId, action, reason } = payload;
+    const date = get().selectedDate.format('YYYY-MM-DD');
+    const key = `${courtId}_${timeSlotId}`;
+    const prev = get().slots[key];
+    
+    // 1. Optimistic update
+    if (prev) {
+      set((state) => ({
+        slots: {
+          ...state.slots,
+          [key]: {
+            ...prev,
+            status: action === 'lock' ? 'locked' : 'available',
+            lockedReason: reason || prev.lockedReason
+          }
+        }
+      }));
+    }
+
     try {
-      const { courtId, timeSlotId, action } = payload;
-      const key = `${courtId}_${timeSlotId}`;
-      const currentSlot = get().slots[key];
-      
-      // Optimistic update
-      if (currentSlot) {
+      // 2. Real API call
+      await overviewApi.updateSlot({ courtId, date, timeSlotId, action, reason });
+      // 3. Success
+      message.success(action === 'lock' ? 'Slot locked' : 'Slot unlocked');
+    } catch (error) {
+      // 4. Rollback on failure
+      if (prev) {
         set((state) => ({
           slots: {
             ...state.slots,
-            [key]: {
-              ...currentSlot,
-              status: action === 'lock' ? 'locked' : 'available',
-              lockedReason: payload.reason || currentSlot.lockedReason
-            }
+            [key]: prev
           }
         }));
       }
-
-      await axios.patch(`${API_URL}/api/slots/lock`, payload);
-      
-    } catch (error) {
-      // Revert optimistic update (in a real app we'd need the previous state)
-      get().loadOverviewData(get().selectedDate);
+      message.error("Failed to update slot");
       throw error;
     }
   },
@@ -136,38 +149,59 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
   },
 
   createBooking: async (payload) => {
+    const coveredKeys = payload.selectedCells;
+    const prevSlots = { ...get().slots };
+
+    // 1. Optimistically mark all covered slots as booked
+    set((state) => {
+      const newSlots = { ...state.slots };
+      coveredKeys.forEach(key => {
+        if (newSlots[key]) {
+          newSlots[key] = {
+            ...newSlots[key],
+            status: 'booked'
+          };
+        }
+      });
+      return { slots: newSlots };
+    });
+
     try {
-       // Optimistically block the slots pending loadOverviewData refresh
-       set((state) => {
-          const newSlots = { ...state.slots };
-          payload.selectedCells.forEach(key => {
-             if (newSlots[key]) {
-                newSlots[key] = {
-                   ...newSlots[key],
-                   status: 'booked',
-                   booking: {
-                       id: 'optimistic-booking',
-                       customerName: payload.customerName,
-                       customerInitial: payload.customerName.charAt(0).toUpperCase(),
-                       phone: payload.phone,
-                       amount: payload.totalAmount / payload.selectedCells.length,
-                       paymentStatus: payload.paymentMode === 'cash' && payload.downPayment === 0 ? 'pending' : 'paid',
-                       status: 'confirmed'
-                   }
-                };
-             }
-          });
-          return { slots: newSlots, selectedCells: [], isSelecting: false };
-       });
-
-       await axios.post(`${API_URL}/api/bookings`, payload);
-       
-       // Re-fetch to get real ID
-       get().loadOverviewData(get().selectedDate);
-
-    } catch (error) {
-       get().loadOverviewData(get().selectedDate);
-       throw error;
+      const booking = await overviewApi.createBooking(payload as any);
+      
+      // 2. Update cells with real booking data
+      set((state) => {
+        const newSlots = { ...state.slots };
+        coveredKeys.forEach(key => {
+          if (newSlots[key]) {
+            newSlots[key] = {
+              ...newSlots[key],
+              booking: {
+                id: booking.id || 'optimistic-booking',
+                customerName: booking.customerName || payload.customerName,
+                customerInitial: ((booking.customerName || payload.customerName) || 'C').charAt(0).toUpperCase(),
+                phone: booking.phone || payload.phone,
+                amount: payload.totalAmount / coveredKeys.length,
+                paymentStatus: payload.paymentMode === 'cash' && payload.downPayment === 0 ? 'pending' : 'paid',
+                status: 'confirmed'
+              }
+            };
+          }
+        });
+        return { slots: newSlots, selectedCells: [], isSelecting: false };
+      });
+      message.success(`Booking ${booking.bookingCode || 'created'} successfully`);
+    } catch (err: any) {
+      // 3. Rollback all slots
+      set({ slots: prevSlots });
+      // 4. Show conflict details
+      const errorData = err.response?.data || err;
+      if (errorData.code === "SLOT_NOT_AVAILABLE") {
+        message.error(`Conflicts: ${JSON.stringify(errorData.details?.conflicts || [])}`);
+      } else {
+        message.error(errorData.message || "Failed to create booking");
+      }
+      throw err;
     }
   },
 
