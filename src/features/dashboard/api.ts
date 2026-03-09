@@ -2,7 +2,6 @@ import { apiClient } from "@/lib/api-client";
 import {
   DashboardStats,
   RevenueData,
-  BookingTypeData,
   PeakHourData,
   CourtUtilizationData,
 } from "@/types/dashboard.types";
