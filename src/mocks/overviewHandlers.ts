@@ -3,7 +3,7 @@ import { SlotCell, OverviewData, OperatingHours, CreateBookingPayload } from '@/
 import { courtsList } from './courtHandlers';
 import dayjs from 'dayjs';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const mockOperatingHours: OperatingHours = {
   openTime: '06:00',

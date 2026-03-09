@@ -15,7 +15,7 @@ import { CourtUtilizationChart } from './components/CourtUtilizationChart';
 import { RecentBookingsTable } from './components/RecentBookingsTable';
 import { TopCustomersTable } from './components/TopCustomersTable';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore();

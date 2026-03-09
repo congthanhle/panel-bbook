@@ -1,7 +1,7 @@
 import { http, HttpResponse, delay } from 'msw';
 import { Customer } from '@/types/customer.types';
 
-const API_URL = import.meta.env.VITE_API_URL || '';
+const API_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 export const mockCustomers: Customer[] = [
   {
