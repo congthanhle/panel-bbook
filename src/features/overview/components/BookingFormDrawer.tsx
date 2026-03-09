@@ -2,8 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Drawer, Form, Input, Select, Button, InputNumber, Divider, Timeline, Spin, Typography, Tag, Alert, message } from 'antd';
 import { User, Phone, CreditCard, DollarSign, Calendar, Search } from 'lucide-react';
 import { useCourtOverviewStore } from '@/store/courtOverviewStore';
-import { CreateBookingPayload } from '@/types/overview.types';
-import { overviewApi } from '@/features/court-overview/api';
+import { overviewApi, CreateBookingDto, PriceBreakdown } from '@/features/overview/api';
 
 const { Text } = Typography;
 
@@ -20,6 +19,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
   const courts = useCourtOverviewStore(state => state.courts);
   const slots = useCourtOverviewStore(state => state.slots);
   const selectedCells = useCourtOverviewStore(state => state.selectedCells);
+  const selectedDate = useCourtOverviewStore(state => state.selectedDate);
   const createBooking = useCourtOverviewStore(state => state.createBooking);
   const operatingHours = useCourtOverviewStore(state => state.operatingHours);
 
@@ -32,7 +32,8 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
   const [conflictKeys, setConflictKeys] = useState<string[]>([]);
   
   const [calculatedPrice, setCalculatedPrice] = useState<number | null>(null);
-  const [isPriceLoading] = useState(false);
+  const [priceBreakdown, setPriceBreakdown] = useState<PriceBreakdown | null>(null);
+  const [isPriceLoading, setIsPriceLoading] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -125,9 +126,9 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
       setIsPhoneLoading(true);
       try {
         const res = await overviewApi.lookupByPhone(phoneValue);
-        // Assuming res returns a DTO with { id, name, tier } or similar
+        // Assuming res returns a DTO with { id, name, membershipTier } or similar
         setCustomerLookupStatus('found');
-        setCustomerTier(res.tier || 'Standard');
+        setCustomerTier(res.membershipTier || 'Standard');
         form.setFieldValue('customerName', res.name);
       } catch (err: any) {
         if (err.response?.status === 404) {
@@ -164,20 +165,56 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
     setConflictKeys(conflicts);
   }, [cellsToBook, slots, isOpen]);
 
-  // 3. PRICE PREVIEW (Simulated local logic since /courts/:courtId/calculate-price isn't defined in api.ts)
+  // 3. PRICE PREVIEW via API
   useEffect(() => {
     if (!isOpen || cellsToBook.length === 0) return;
-    // In a real scenario you would call an API, e.g.:
-    // overviewApi.calculatePrice({ courtId, date, startTime, endTime })
-    // For now we use the local calculated totalPrice:
+
+    // Derive court, start and end from the sorted cells
+    const firstCell = sortedCells[0];
+    const lastCell = sortedCells[sortedCells.length - 1];
+    if (!firstCell || !lastCell) return;
+
+    const courtId = firstCell.split('_')[0];
+    const startTimeId = firstCell.split('_')[1];
+    const endTimeId = getEndTimeId(lastCell.split('_')[1], 1);
+    const date = selectedDate.format('YYYY-MM-DD');
+
+    // Format time IDs to HH:mm
+    const toHHmm = (id: string) => `${id.substring(0, 2)}:${id.substring(2)}`;
+    const startTime = toHHmm(startTimeId);
+    const endTime = toHHmm(endTimeId);
+
+    // Set local fallback immediately
     setCalculatedPrice(totalPrice);
-    
-    form.setFieldsValue({
-       totalAmount: totalPrice,
-       paymentMode: 'cash',
-       downPayment: 0
-    });
-  }, [isOpen, cellsToBook, totalPrice, form]);
+    form.setFieldsValue({ totalAmount: totalPrice, paymentMode: 'cash', downPayment: 0 });
+
+    // Call API for real price
+    const abortController = new AbortController();
+    setIsPriceLoading(true);
+
+    overviewApi
+      .calculatePrice(courtId, date, startTime, endTime)
+      .then((res) => {
+        if (!abortController.signal.aborted) {
+          setPriceBreakdown(res);
+          setCalculatedPrice(res.totalAmount);
+          form.setFieldValue('totalAmount', res.totalAmount);
+        }
+      })
+      .catch(() => {
+        // Fallback: keep local calculation
+        if (!abortController.signal.aborted) {
+          setPriceBreakdown(null);
+        }
+      })
+      .finally(() => {
+        if (!abortController.signal.aborted) {
+          setIsPriceLoading(false);
+        }
+      });
+
+    return () => abortController.abort();
+  }, [isOpen, sortedCells, selectedDate, totalPrice, form]);
 
   const handleSubmit = async (values: any) => {
     if (hasConflicts) {
@@ -187,16 +224,22 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
     
     setIsSubmitting(true);
     try {
-      const payload: CreateBookingPayload = {
+      // Derive courtId from the first selected cell
+      const firstCourtId = cellsToBook[0]?.split('_')[0] || '';
+      const date = selectedDate.format('YYYY-MM-DD');
+
+      const dto: CreateBookingDto = {
+        courtId: firstCourtId,
+        date,
         selectedCells: cellsToBook,
         customerName: values.customerName,
         phone: values.phone,
         paymentMode: values.paymentMode,
         downPayment: values.downPayment || 0,
-        totalAmount: calculatedPrice || values.totalAmount, // priority to calculated price
+        totalAmount: calculatedPrice || values.totalAmount,
       };
       
-      await createBooking(payload);
+      await createBooking(dto);
       onClose(); // store shows success toast
     } catch (error: any) {
        console.error("Booking failed", error);
@@ -280,6 +323,53 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
                 />
               )}
               
+              {/* Slot Mini-Strip: visual per-slot availability */}
+              <div className="mb-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Slot Availability</div>
+                <div className="flex gap-1 flex-wrap">
+                  {sortedCells.map((cellId) => {
+                    const slot = slots[cellId];
+                    const timeId = cellId.split('_')[1];
+                    const isConflict = conflictKeys.includes(cellId);
+                    const isLocked = slot?.status === 'locked';
+
+                    let bgColor = 'bg-emerald-400'; // available
+                    let borderColor = 'border-emerald-300';
+                    let tooltip = `${formatTimeSlot(timeId)} — Available`;
+
+                    if (isConflict) {
+                      bgColor = 'bg-red-400';
+                      borderColor = 'border-red-300';
+                      tooltip = `${formatTimeSlot(timeId)} — ${isLocked ? 'Locked' : 'Booked'}`;
+                    } else if (isLocked) {
+                      bgColor = 'bg-slate-400';
+                      borderColor = 'border-slate-300';
+                      tooltip = `${formatTimeSlot(timeId)} — Locked`;
+                    }
+
+                    return (
+                      <div
+                        key={cellId}
+                        title={tooltip}
+                        className={`h-7 rounded-md border ${bgColor} ${borderColor} flex items-center justify-center px-2 cursor-default transition-all hover:scale-105 hover:shadow-sm`}
+                      >
+                        <span className="text-[10px] font-bold text-white drop-shadow-sm">
+                          {formatTimeSlot(timeId)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {hasConflicts && (
+                  <div className="flex items-center gap-3 mt-2 text-[10px] font-medium text-slate-500">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" /> Available</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" /> Conflict</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-400" /> Locked</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Timeline */}
               <div className={`bg-white rounded-lg border p-4 mb-4 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] ${hasConflicts ? 'border-red-300 bg-red-50' : 'border-slate-100'}`}>
                 <Timeline 
                   className="pt-2 pl-1"
@@ -334,16 +424,42 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
              </div>
 
              <Divider className="my-3 border-slate-200" />
-             
-             <div className="flex justify-between items-center py-2">
-                <span className="text-sm font-medium text-slate-500">
-                  Total Price {isPriceLoading && <Spin size="small" className="ml-2" />}
-                </span>
-                <span className="text-lg font-bold text-indigo-700">
-                   <DollarSign size={16} className="inline -mt-0.5" />
-                   {(calculatedPrice || totalPrice).toFixed(2)}
-                </span>
-             </div>
+              
+              {/* Price Breakdown */}
+              <div className="py-2 space-y-2">
+                {isPriceLoading ? (
+                  <div className="flex items-center justify-center py-3">
+                    <Spin size="small" />
+                    <span className="ml-2 text-xs text-slate-400">Calculating price…</span>
+                  </div>
+                ) : (
+                  <>
+                    {priceBreakdown?.details?.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500">{item.label}</span>
+                        <span className="font-medium text-slate-700">
+                          {item.amount.toLocaleString('vi-VN')}đ
+                        </span>
+                      </div>
+                    ))}
+                    {priceBreakdown && !priceBreakdown.details?.length && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-slate-500">Court fee</span>
+                        <span className="font-medium text-slate-700">
+                          {priceBreakdown.courtFee.toLocaleString('vi-VN')}đ
+                        </span>
+                      </div>
+                    )}
+                    <Divider className="my-1 border-slate-100" />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-slate-500">Total</span>
+                      <span className="text-lg font-bold text-indigo-700">
+                        {(calculatedPrice || totalPrice).toLocaleString('vi-VN')}đ
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
           </div>
 
           <Form

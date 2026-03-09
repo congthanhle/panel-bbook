@@ -68,7 +68,7 @@ const SlotCellComponent: React.FC<SlotCellProps> = ({
       return (
         <div className="text-xs">
           <div className="font-semibold mb-1">{data.booking.customerName}</div>
-          <div className="opacity-80">Paid: ${data.booking.amount.toFixed(2)}</div>
+          <div className="opacity-80">Paid: ${(data.booking.amount ?? 0).toFixed(2)}</div>
         </div>
       );
     }
@@ -121,8 +121,8 @@ export const SlotCell = memo(SlotCellComponent, (prevProps, nextProps) => {
     prevProps.courtId === nextProps.courtId &&
     prevProps.timeSlotId === nextProps.timeSlotId &&
     prevProps.data?.status === nextProps.data?.status &&
-    // We handle selection state via the store in the parent, but if we passed it down, we'd check it here
-    // In this Architecture, we rely on the parent (which subscribes to selection) to re-render the row/cell
-    true 
+    prevProps.data?.booking?.id === nextProps.data?.booking?.id &&
+    prevProps.data?.booking?.paymentStatus === nextProps.data?.booking?.paymentStatus &&
+    prevProps.data?.lockedReason === nextProps.data?.lockedReason
   );
 });

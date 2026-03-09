@@ -35,7 +35,7 @@ const CourtOverviewPage: React.FC = () => {
     let locked = 0;
     let maintenance = 0;
 
-    Object.values(slots).forEach(slot => {
+    Object.values(slots || {}).forEach(slot => {
       if (slot.status === 'available') available++;
       if (slot.status === 'booked') booked++;
       if (slot.status === 'locked') locked++;

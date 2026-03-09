@@ -44,15 +44,15 @@ export const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({ onBookSele
 
   const handleCancelBooking = async () => {
     if (!isSingleBookedSlot) return;
+    const slot = slots[selectedCells[0]];
+    const bookingId = slot?.booking?.id;
+    if (!bookingId) {
+      console.error('No booking ID found for selected slot');
+      return;
+    }
     setIsSubmitting(true);
     try {
-       const [courtId, timeSlotId] = selectedCells[0].split('_');
-       await cancelBooking({
-         courtId,
-         timeSlotId,
-         action: 'unlock',
-         reason: reason || 'Cancelled by admin/staff'
-       });
+       await cancelBooking(bookingId, reason || 'Cancelled by admin/staff');
        setReason('');
        clearSelection();
     } catch (error) {

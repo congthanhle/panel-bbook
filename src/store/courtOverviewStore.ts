@@ -1,11 +1,8 @@
 import { create } from 'zustand';
 import dayjs, { Dayjs } from 'dayjs';
-import { SlotCell, SingleActionPayload, BulkActionPayload, Court, OperatingHours, CreateBookingPayload } from '@/types/overview.types';
-import axios from 'axios';
+import { SlotCell, BulkActionPayload, Court, OperatingHours, Booking } from '@/types/overview.types';
 import { message } from 'antd';
-import { overviewApi } from '@/features/court-overview/api';
-
-const API_URL = import.meta.env.VITE_API_URL || '';
+import { overviewApi, CreateBookingDto } from '@/features/overview/api';
 
 interface CourtOverviewState {
   selectedDate: Dayjs;
@@ -26,10 +23,14 @@ interface CourtOverviewState {
   
   // API Actions
   loadOverviewData: (date: Dayjs) => Promise<void>;
-  toggleLockSlot: (payload: SingleActionPayload) => Promise<void>;
+  toggleSlotLock: (courtId: string, timeSlotId: string, date: string, action: 'lock' | 'unlock', reason?: string) => Promise<void>;
   bulkLockSlots: (payload: BulkActionPayload) => Promise<void>;
-  createBooking: (payload: CreateBookingPayload) => Promise<void>;
-  cancelBooking: (payload: SingleActionPayload) => Promise<void>;
+  createBooking: (dto: CreateBookingDto) => Promise<void>;
+  cancelBooking: (bookingId: string, reason?: string) => Promise<void>;
+
+  // Slot-level booking updates (used by BookingDetailDrawer)
+  updateSlotBooking: (cellKey: string, bookingUpdate: Partial<Booking>) => void;
+  revertSlotToAvailable: (cellKey: string) => void;
 }
 
 export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
@@ -63,33 +64,60 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
     return { selectedCells: [...state.selectedCells, ...newCells] };
   }),
 
+  updateSlotBooking: (cellKey, bookingUpdate) => set((state) => {
+    const slot = state.slots[cellKey];
+    if (!slot || !slot.booking) return state;
+    return {
+      slots: {
+        ...state.slots,
+        [cellKey]: {
+          ...slot,
+          booking: { ...slot.booking, ...bookingUpdate },
+        },
+      },
+    };
+  }),
+
+  revertSlotToAvailable: (cellKey) => set((state) => {
+    const slot = state.slots[cellKey];
+    if (!slot) return state;
+    return {
+      slots: {
+        ...state.slots,
+        [cellKey]: {
+          ...slot,
+          status: 'available',
+          booking: undefined,
+        },
+      },
+    };
+  }),
+
   loadOverviewData: async (date) => {
     set({ isLoading: true, error: null });
     try {
       const formattedDate = date.format('YYYY-MM-DD');
-      const response = await axios.get(`${API_URL}/api/overview?date=${formattedDate}`);
-      
-      set({ 
-        slots: response.data.slots,
-        courts: response.data.courts,
-        operatingHours: response.data.operatingHours,
-        isLoading: false 
+      const data = await overviewApi.getOverview(formattedDate);
+
+      set({
+        slots: data.slots || {},
+        courts: data.courts || [],
+        operatingHours: data.operatingHours || null,
+        isLoading: false,
       });
     } catch (error: any) {
-      set({ 
-        error: error.message || 'Failed to load overview data', 
-        isLoading: false 
+      set({
+        error: error.message || 'Failed to load overview data',
+        isLoading: false,
       });
     }
   },
 
-  toggleLockSlot: async (payload) => {
-    const { courtId, timeSlotId, action, reason } = payload;
-    const date = get().selectedDate.format('YYYY-MM-DD');
+  toggleSlotLock: async (courtId, timeSlotId, date, action, reason?) => {
     const key = `${courtId}_${timeSlotId}`;
-    const prev = get().slots[key];
-    
-    // 1. Optimistic update
+    const prev = get().slots[key]; // save for rollback
+
+    // 1. Optimistic update — instant UI feedback
     if (prev) {
       set((state) => ({
         slots: {
@@ -97,138 +125,136 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
           [key]: {
             ...prev,
             status: action === 'lock' ? 'locked' : 'available',
-            lockedReason: reason || prev.lockedReason
-          }
-        }
+            lockedReason: action === 'lock' ? (reason || prev.lockedReason) : undefined,
+          },
+        },
       }));
     }
 
     try {
       // 2. Real API call
       await overviewApi.updateSlot({ courtId, date, timeSlotId, action, reason });
-      // 3. Success
+      // 3. Success: toast (subtle, not disruptive)
       message.success(action === 'lock' ? 'Slot locked' : 'Slot unlocked');
-    } catch (error) {
+    } catch (err) {
       // 4. Rollback on failure
       if (prev) {
         set((state) => ({
-          slots: {
-            ...state.slots,
-            [key]: prev
-          }
+          slots: { ...state.slots, [key]: prev },
         }));
       }
-      message.error("Failed to update slot");
-      throw error;
+      message.error('Failed to update slot');
+      throw err;
     }
   },
 
   bulkLockSlots: async (payload) => {
-     try {
-       // Optimistic update
-       set((state) => {
-         const newSlots = { ...state.slots };
-         payload.slots.forEach(key => {
-           if (newSlots[key]) {
-             newSlots[key] = {
-               ...newSlots[key],
-               status: payload.action === 'lock' ? 'locked' : 'available',
-               lockedReason: payload.reason || newSlots[key].lockedReason
-             };
-           }
-         });
-         return { slots: newSlots, selectedCells: [], isSelecting: false };
-       });
+    const prevSlots = { ...get().slots };
 
-       await axios.patch(`${API_URL}/api/slots/bulk`, payload);
+    // 1. Optimistic update
+    set((state) => {
+      const newSlots = { ...state.slots };
+      payload.slots.forEach((key) => {
+        if (newSlots[key]) {
+          newSlots[key] = {
+            ...newSlots[key],
+            status: payload.action === 'lock' ? 'locked' : 'available',
+            lockedReason: payload.action === 'lock'
+              ? (payload.reason || newSlots[key].lockedReason)
+              : undefined,
+          };
+        }
+      });
+      return { slots: newSlots, selectedCells: [], isSelecting: false };
+    });
 
-     } catch (error) {
-        get().loadOverviewData(get().selectedDate);
-        throw error;
-     }
+    try {
+      // 2. Real API call
+      await overviewApi.bulkUpdateSlots({
+        slots: payload.slots,
+        action: payload.action,
+        reason: payload.reason,
+      });
+      message.success(
+        payload.action === 'lock'
+          ? `${payload.slots.length} slots locked`
+          : `${payload.slots.length} slots unlocked`,
+      );
+    } catch (err) {
+      // 3. Rollback — full reload to ensure consistency
+      set({ slots: prevSlots });
+      message.error('Bulk update failed');
+      get().loadOverviewData(get().selectedDate);
+      throw err;
+    }
   },
 
-  createBooking: async (payload) => {
-    const coveredKeys = payload.selectedCells;
+  createBooking: async (dto) => {
+    const coveredKeys = dto.selectedCells;
     const prevSlots = { ...get().slots };
 
     // 1. Optimistically mark all covered slots as booked
     set((state) => {
       const newSlots = { ...state.slots };
-      coveredKeys.forEach(key => {
+      coveredKeys.forEach((key) => {
         if (newSlots[key]) {
-          newSlots[key] = {
-            ...newSlots[key],
-            status: 'booked'
-          };
+          newSlots[key] = { ...newSlots[key], status: 'booked' };
         }
       });
       return { slots: newSlots };
     });
 
     try {
-      const booking = await overviewApi.createBooking(payload as any);
-      
-      // 2. Update cells with real booking data
+      const booking = await overviewApi.createBooking(dto);
+
+      // 2. Update cells with real booking data (code, customerName)
       set((state) => {
         const newSlots = { ...state.slots };
-        coveredKeys.forEach(key => {
+        coveredKeys.forEach((key) => {
           if (newSlots[key]) {
             newSlots[key] = {
               ...newSlots[key],
               booking: {
-                id: booking.id || 'optimistic-booking',
-                customerName: booking.customerName || payload.customerName,
-                customerInitial: ((booking.customerName || payload.customerName) || 'C').charAt(0).toUpperCase(),
-                phone: booking.phone || payload.phone,
-                amount: payload.totalAmount / coveredKeys.length,
-                paymentStatus: payload.paymentMode === 'cash' && payload.downPayment === 0 ? 'pending' : 'paid',
-                status: 'confirmed'
-              }
+                id: booking.id,
+                bookingCode: booking.bookingCode,
+                customerName: booking.customerName || dto.customerName,
+                customerInitial: (booking.customerName || dto.customerName || 'C').charAt(0).toUpperCase(),
+                phone: booking.phone || dto.phone,
+                amount: dto.totalAmount / coveredKeys.length,
+                paymentStatus: dto.paymentMode === 'cash' && !dto.downPayment ? 'pending' : 'paid',
+                status: 'confirmed',
+              },
             };
           }
         });
         return { slots: newSlots, selectedCells: [], isSelecting: false };
       });
+
       message.success(`Booking ${booking.bookingCode || 'created'} successfully`);
     } catch (err: any) {
       // 3. Rollback all slots
       set({ slots: prevSlots });
-      // 4. Show conflict details
+
+      // 4. Show conflict details if 409
       const errorData = err.response?.data || err;
-      if (errorData.code === "SLOT_NOT_AVAILABLE") {
-        message.error(`Conflicts: ${JSON.stringify(errorData.details?.conflicts || [])}`);
+      if (errorData.code === 'SLOT_NOT_AVAILABLE') {
+        const conflicts = errorData.details?.conflicts || [];
+        message.error(`Slot conflicts: ${conflicts.map((c: any) => c.label || c).join(', ')}`);
       } else {
-        message.error(errorData.message || "Failed to create booking");
+        message.error(errorData.message || 'Failed to create booking');
       }
       throw err;
     }
   },
 
-  cancelBooking: async (payload) => {
+  cancelBooking: async (bookingId, reason?) => {
     try {
-      const { courtId, timeSlotId } = payload;
-      const key = `${courtId}_${timeSlotId}`;
-      const currentSlot = get().slots[key];
-
-      // Optimistic update: revert to available and clear booking details
-      if (currentSlot) {
-        set((state) => ({
-          slots: {
-            ...state.slots,
-            [key]: {
-              ...currentSlot,
-              status: 'available',
-              booking: undefined
-            }
-          }
-        }));
-      }
-
-      await axios.patch(`${API_URL}/api/bookings/cancel`, payload);
-
+      await overviewApi.cancelBooking(bookingId, reason || '');
+      // Reload to get fresh slot states
+      await get().loadOverviewData(get().selectedDate);
+      message.success('Booking cancelled');
     } catch (error) {
-      get().loadOverviewData(get().selectedDate);
+      message.error('Failed to cancel booking');
       throw error;
     }
   }

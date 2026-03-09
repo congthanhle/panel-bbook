@@ -9,6 +9,7 @@ export interface TimeSlot {
 
 export interface Booking {
   id: string;
+  bookingCode?: string;
   customerName: string;
   customerInitial?: string;
   phone?: string;
