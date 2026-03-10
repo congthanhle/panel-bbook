@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Drawer, Form, Input, Select, Button, message } from 'antd';
+import { Drawer, Form, Input, Select, Button } from 'antd';
 import { Image as ImageIcon, Upload as UploadIcon } from 'lucide-react';
 import { Court } from '@/types/court.types';
 import { useCourtStore } from '@/store/courtStore';
@@ -15,17 +15,23 @@ interface CourtFormDrawerProps {
 
 export const CourtFormDrawer: React.FC<CourtFormDrawerProps> = ({ isOpen, onClose, court }) => {
   const [form] = Form.useForm();
-  const addCourt = useCourtStore(state => state.addCourt);
-  const updateCourt = useCourtStore(state => state.updateCourt);
+  const createCourt = useCourtStore(state => state.create);
+  const updateCourt = useCourtStore(state => state.update);
   const isLoading = useCourtStore(state => state.isLoading);
 
   useEffect(() => {
     if (isOpen) {
       if (court) {
-        form.setFieldsValue(court);
+        form.setFieldsValue({
+          name: court.name,
+          type: court.type,
+          description: court.description,
+          imageUrl: court.imageUrl,
+          isActive: court.isActive,
+        });
       } else {
         form.resetFields();
-        form.setFieldsValue({ status: 'active', type: 'badminton' });
+        form.setFieldsValue({ type: 'badminton' });
       }
     }
   }, [court, isOpen, form]);
@@ -33,15 +39,16 @@ export const CourtFormDrawer: React.FC<CourtFormDrawerProps> = ({ isOpen, onClos
   const handleSubmit = async (values: any) => {
     try {
       if (court) {
+        // Send all fields including isActive for update
         await updateCourt(court.id, values);
-        message.success('Court updated successfully');
       } else {
-        await addCourt(values);
-        message.success('Court created successfully');
+        // Only send fields accepted by CreateCourtDto
+        const { isActive, ...createPayload } = values;
+        await createCourt(createPayload);
       }
       onClose();
     } catch (error) {
-      message.error('Failed to save court');
+      // Store handles toast
     }
   };
 
@@ -51,7 +58,7 @@ export const CourtFormDrawer: React.FC<CourtFormDrawerProps> = ({ isOpen, onClos
       width={480}
       onClose={onClose}
       open={isOpen}
-      destroyOnClose
+      destroyOnHidden
       footer={
         <div className="flex justify-end gap-3">
           <Button onClick={onClose} disabled={isLoading}>Cancel</Button>
@@ -115,16 +122,18 @@ export const CourtFormDrawer: React.FC<CourtFormDrawerProps> = ({ isOpen, onClos
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="status"
-            label={<span className="font-medium text-slate-700">Status</span>}
-            rules={[{ required: true, message: 'Please select status' }]}
-          >
-            <Select size="large" className="rounded-lg [&_.ant-select-selector]:rounded-lg">
-              <Option value="active">Active</Option>
-              <Option value="inactive">Inactive</Option>
-            </Select>
-          </Form.Item>
+          {court && (
+            <Form.Item
+              name="isActive"
+              label={<span className="font-medium text-slate-700">Status</span>}
+              rules={[{ required: true, message: 'Please select status' }]}
+            >
+              <Select size="large" className="rounded-lg [&_.ant-select-selector]:rounded-lg">
+                <Option value={true}>Active</Option>
+                <Option value={false}>Inactive</Option>
+              </Select>
+            </Form.Item>
+          )}
         </div>
 
         <Form.Item

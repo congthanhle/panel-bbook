@@ -383,7 +383,7 @@ export const BookingDetailDrawer: React.FC<BookingDetailDrawerProps> = ({
       width={520}
       onClose={onClose}
       open={isOpen}
-      destroyOnClose
+      destroyOnHidden
       closeIcon={
         <div className="text-slate-400 hover:text-slate-700 transition-colors">
           ✕

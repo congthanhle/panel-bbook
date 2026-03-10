@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Drawer, Table, Button, Form, Select, TimePicker, InputNumber, Popconfirm, Tag, message, DatePicker } from 'antd';
+import { Drawer, Table, Button, Form, Select, TimePicker, InputNumber, Popconfirm, Tag, DatePicker } from 'antd';
 import { Plus, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Court, PriceRule } from '@/types/court.types';
 import { useCourtStore } from '@/store/courtStore';
@@ -14,9 +14,9 @@ interface PricingDrawerProps {
 }
 
 export const PricingDrawer: React.FC<PricingDrawerProps> = ({ isOpen, onClose, court }) => {
-  const fetchPricing = useCourtStore(state => state.fetchPricing);
-  const addPricingRule = useCourtStore(state => state.addPricingRule);
-  const deletePricingRule = useCourtStore(state => state.deletePricingRule);
+  const fetchPriceRules = useCourtStore(state => state.fetchPriceRules);
+  const addRule = useCourtStore(state => state.addRule);
+  const deleteRule = useCourtStore(state => state.deleteRule);
   const pricingRules = useCourtStore(state => state.pricingRules);
   const isPricingLoading = useCourtStore(state => state.isPricingLoading);
 
@@ -26,11 +26,11 @@ export const PricingDrawer: React.FC<PricingDrawerProps> = ({ isOpen, onClose, c
 
   useEffect(() => {
     if (isOpen && court) {
-      fetchPricing(court.id);
+      fetchPriceRules(court.id);
       setIsAdding(false);
       form.resetFields();
     }
-  }, [isOpen, court, fetchPricing, form]);
+  }, [isOpen, court, fetchPriceRules, form]);
 
   const currentRules = court ? (pricingRules[court.id] || []) : [];
 
@@ -45,21 +45,20 @@ export const PricingDrawer: React.FC<PricingDrawerProps> = ({ isOpen, onClose, c
         specificDate: values.dayType === 'specific_date' ? values.specificDate.format('YYYY-MM-DD') : undefined,
       };
       
-      await addPricingRule(court.id, payload);
-      message.success('Pricing rule added');
+      await addRule(court.id, payload);
       setIsAdding(false);
       form.resetFields();
     } catch (error) {
-      message.error('Failed to add rule');
+      // Store handles toast
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (!court) return;
     try {
-      await deletePricingRule(id);
-      message.success('Rule deleted');
+      await deleteRule(id, court.id);
     } catch (error) {
-       message.error('Failed to delete rule');
+      // Store handles toast
     }
   };
 
@@ -134,7 +133,7 @@ export const PricingDrawer: React.FC<PricingDrawerProps> = ({ isOpen, onClose, c
       width={600}
       onClose={onClose}
       open={isOpen}
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="space-y-6">
         {/* Info Banner */}

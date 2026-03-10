@@ -1,175 +1,239 @@
 import { create } from 'zustand';
-import { Court, PriceRule } from '@/types/court.types';
-import axios from '@/lib/axios';
+import { message } from 'antd';
+import {
+  Court,
+  PriceRule,
+  CourtQueryDto,
+  CreateCourtDto,
+  UpdateCourtDto,
+  CreatePriceRuleDto,
+  UpdatePriceRuleDto,
+  LockCourtDto,
+} from '@/types/court.types';
+import { courtsApi } from '@/features/courts/api';
 
 interface CourtState {
   courts: Court[];
+  totalCourts: number;
   isLoading: boolean;
   error: string | null;
   selectedCourt: Court | null;
   pricingRules: Record<string, PriceRule[]>; // Keyed by courtId
   isPricingLoading: boolean;
 
-  // Actions
-  fetchCourts: () => Promise<void>;
-  addCourt: (court: Omit<Court, 'id'>) => Promise<void>;
-  updateCourt: (id: string, updates: Partial<Court>) => Promise<void>;
-  deleteCourt: (id: string) => Promise<void>;
+  // CRUD Actions
+  fetchAll: (params?: CourtQueryDto) => Promise<void>;
+  fetchOne: (id: string) => Promise<void>;
+  create: (dto: CreateCourtDto) => Promise<void>;
+  update: (id: string, dto: UpdateCourtDto) => Promise<void>;
+  remove: (id: string) => Promise<void>;
   setSelectedCourt: (court: Court | null) => void;
 
   // Pricing Actions
-  fetchPricing: (courtId: string) => Promise<void>;
-  addPricingRule: (courtId: string, rule: Omit<PriceRule, 'id' | 'courtId'>) => Promise<void>;
-  updatePricingRule: (ruleId: string, updates: Partial<PriceRule>) => Promise<void>;
-  deletePricingRule: (ruleId: string) => Promise<void>;
+  fetchPriceRules: (courtId: string) => Promise<void>;
+  addRule: (courtId: string, dto: CreatePriceRuleDto) => Promise<void>;
+  updateRule: (ruleId: string, dto: UpdatePriceRuleDto) => Promise<void>;
+  deleteRule: (ruleId: string, courtId: string) => Promise<void>;
+
+  // Lock Actions
+  lockCourt: (courtId: string, dto: LockCourtDto) => Promise<void>;
 }
 
 export const useCourtStore = create<CourtState>((set) => ({
   courts: [],
+  totalCourts: 0,
   isLoading: false,
   error: null,
   selectedCourt: null,
   pricingRules: {},
   isPricingLoading: false,
 
-  fetchCourts: async () => {
+  // ── CRUD ───────────────────────────────────────────────────────────
+
+  fetchAll: async (params) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get('/courts');
-      set({ courts: response.data, isLoading: false });
+      // The axios response interceptor already unwraps { success, data, meta } → data,
+      // so `res` is Court[] directly (meta is in response headers but not accessible here).
+      const res = await courtsApi.getAll(params);
+      const courts = Array.isArray(res) ? res : (res as any).data ?? [];
+      const total = Array.isArray(res) ? courts.length : ((res as any).meta?.total ?? courts.length);
+      set({ courts, totalCourts: total, isLoading: false });
     } catch (error: any) {
-      set({ error: error.message || 'Failed to fetch courts', isLoading: false });
+      const msg = error?.response?.data?.message || error.message || 'Failed to fetch courts';
+      set({ error: msg, isLoading: false });
+      message.error(msg);
     }
   },
 
-  addCourt: async (courtData) => {
+  fetchOne: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/courts', courtData);
-      set(state => ({ 
-        courts: [...state.courts, response.data],
-        isLoading: false 
-      }));
+      const court = await courtsApi.getOne(id);
+      set({ selectedCourt: court, isLoading: false });
     } catch (error: any) {
-      set({ error: error.message || 'Failed to add court', isLoading: false });
+      const msg = error?.response?.data?.message || error.message || 'Failed to fetch court';
+      set({ error: msg, isLoading: false });
+      message.error(msg);
+    }
+  },
+
+  create: async (dto) => {
+    set({ isLoading: true, error: null });
+    try {
+      const court = await courtsApi.create(dto);
+      set((s) => ({
+        courts: [...s.courts, court],
+        totalCourts: s.totalCourts + 1,
+        isLoading: false,
+      }));
+      message.success('Court created successfully');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error.message || 'Failed to create court';
+      set({ error: msg, isLoading: false });
+      message.error(msg);
       throw error;
     }
   },
 
-  updateCourt: async (id, updates) => {
+  update: async (id, dto) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`/courts/${id}`, updates);
-      set(state => ({
-        courts: state.courts.map(c => c.id === id ? { ...c, ...response.data } : c),
-        selectedCourt: state.selectedCourt?.id === id ? { ...state.selectedCourt, ...response.data } : state.selectedCourt,
-        isLoading: false
+      const updated = await courtsApi.update(id, dto);
+      set((s) => ({
+        courts: s.courts.map((c) => (c.id === id ? { ...c, ...updated } : c)),
+        selectedCourt:
+          s.selectedCourt?.id === id ? { ...s.selectedCourt, ...updated } : s.selectedCourt,
+        isLoading: false,
       }));
+      message.success('Court updated successfully');
     } catch (error: any) {
-      set({ error: error.message || 'Failed to update court', isLoading: false });
+      const msg = error?.response?.data?.message || error.message || 'Failed to update court';
+      set({ error: msg, isLoading: false });
+      message.error(msg);
       throw error;
     }
   },
 
-  deleteCourt: async (id) => {
+  remove: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`/courts/${id}`);
-      set(state => ({
-        courts: state.courts.filter(c => c.id !== id),
-        selectedCourt: state.selectedCourt?.id === id ? null : state.selectedCourt,
-        isLoading: false
+      await courtsApi.remove(id);
+      set((s) => ({
+        courts: s.courts.filter((c) => c.id !== id),
+        totalCourts: s.totalCourts - 1,
+        selectedCourt: s.selectedCourt?.id === id ? null : s.selectedCourt,
+        isLoading: false,
       }));
+      message.success('Court deleted successfully');
     } catch (error: any) {
-      set({ error: error.message || 'Failed to delete court', isLoading: false });
+      const msg = error?.response?.data?.message || error.message || 'Failed to delete court';
+      set({ error: msg, isLoading: false });
+      message.error(msg);
       throw error;
     }
   },
 
   setSelectedCourt: (court) => set({ selectedCourt: court }),
 
-  fetchPricing: async (courtId) => {
+  // ── Pricing ────────────────────────────────────────────────────────
+
+  fetchPriceRules: async (courtId) => {
     set({ isPricingLoading: true });
     try {
-      const response = await axios.get(`/courts/${courtId}/pricing`);
-      set(state => ({
-        pricingRules: {
-          ...state.pricingRules,
-          [courtId]: response.data
-        },
-        isPricingLoading: false
+      const rules = await courtsApi.getPriceRules(courtId);
+      set((s) => ({
+        pricingRules: { ...s.pricingRules, [courtId]: rules },
+        isPricingLoading: false,
       }));
-    } catch (error) {
-      console.error('Failed to fetch pricing', error);
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error.message || 'Failed to fetch price rules';
       set({ isPricingLoading: false });
+      message.error(msg);
     }
   },
 
-  addPricingRule: async (courtId, ruleData) => {
+  addRule: async (courtId, dto) => {
     set({ isPricingLoading: true });
     try {
-      const response = await axios.post(`/courts/${courtId}/pricing`, ruleData);
-      set(state => {
-        const currentRules = state.pricingRules[courtId] || [];
+      const rule = await courtsApi.addPriceRule(courtId, dto);
+      set((s) => {
+        const current = s.pricingRules[courtId] || [];
         return {
-          pricingRules: {
-            ...state.pricingRules,
-            [courtId]: [...currentRules, response.data]
-          },
-          isPricingLoading: false
+          pricingRules: { ...s.pricingRules, [courtId]: [...current, rule] },
+          isPricingLoading: false,
         };
       });
-    } catch (error) {
-      console.error('Failed to add pricing rule', error);
+      message.success('Price rule added');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error.message || 'Failed to add price rule';
       set({ isPricingLoading: false });
+      message.error(msg);
       throw error;
     }
   },
 
-  updatePricingRule: async (ruleId, updates) => {
+  updateRule: async (ruleId, dto) => {
+    set({ isPricingLoading: true });
     try {
-      const response = await axios.patch(`/pricing/${ruleId}`, updates);
-      const updatedRule = response.data;
-      
-      set(state => {
-        const courtId = updatedRule.courtId;
-        const currentRules = state.pricingRules[courtId] || [];
+      const updated = await courtsApi.updatePriceRule(ruleId, dto);
+      set((s) => {
+        const courtId = updated.courtId;
+        const current = s.pricingRules[courtId] || [];
         return {
           pricingRules: {
-            ...state.pricingRules,
-            [courtId]: currentRules.map(r => r.id === ruleId ? updatedRule : r)
-          }
+            ...s.pricingRules,
+            [courtId]: current.map((r) => (r.id === ruleId ? updated : r)),
+          },
+          isPricingLoading: false,
         };
       });
-    } catch (error) {
-       console.error('Failed to update pricing rule', error);
-       throw error;
+      message.success('Price rule updated');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error.message || 'Failed to update price rule';
+      set({ isPricingLoading: false });
+      message.error(msg);
+      throw error;
     }
   },
-  
-  deletePricingRule: async (ruleId) => {
+
+  deleteRule: async (ruleId, courtId) => {
+    set({ isPricingLoading: true });
     try {
-      await axios.delete(`/pricing/${ruleId}`);
-      set(state => {
-         const newPricingRules = { ...state.pricingRules };
-         let foundCourtId = null;
-         
-         for (const [courtId, rules] of Object.entries(newPricingRules)) {
-             if (rules.some(r => r.id === ruleId)) {
-                 foundCourtId = courtId;
-                 break;
-             }
-         }
-         
-         if (foundCourtId) {
-             newPricingRules[foundCourtId] = newPricingRules[foundCourtId].filter(r => r.id !== ruleId);
-         }
-         
-         return { pricingRules: newPricingRules };
-      });
-    } catch(error) {
-        console.error('Failed to delete pricing rule', error);
-        throw error;
+      await courtsApi.deletePriceRule(ruleId);
+      set((s) => ({
+        pricingRules: {
+          ...s.pricingRules,
+          [courtId]: (s.pricingRules[courtId] || []).filter((r) => r.id !== ruleId),
+        },
+        isPricingLoading: false,
+      }));
+      message.success('Price rule deleted');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || error.message || 'Failed to delete price rule';
+      set({ isPricingLoading: false });
+      message.error(msg);
+      throw error;
     }
-  }
+  },
+
+  // ── Lock ───────────────────────────────────────────────────────────
+
+  lockCourt: async (courtId, dto) => {
+    set({ isLoading: true, error: null });
+    try {
+      const action = dto.action === 'lock' ? courtsApi.lockCourt : courtsApi.unlockCourt;
+      await action(courtId, dto);
+      set({ isLoading: false });
+      message.success(`Court ${dto.action === 'lock' ? 'locked' : 'unlocked'} successfully`);
+    } catch (error: any) {
+      const msg =
+        error?.response?.data?.message ||
+        error.message ||
+        `Failed to ${dto.action} court`;
+      set({ error: msg, isLoading: false });
+      message.error(msg);
+      throw error;
+    }
+  },
 }));

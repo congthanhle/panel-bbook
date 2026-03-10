@@ -18,8 +18,8 @@ const Courts = () => {
   
   const courts = useCourtStore(state => state.courts);
   const isLoading = useCourtStore(state => state.isLoading);
-  const fetchCourts = useCourtStore(state => state.fetchCourts);
-  const deleteCourt = useCourtStore(state => state.deleteCourt);
+  const fetchAll = useCourtStore(state => state.fetchAll);
+  const remove = useCourtStore(state => state.remove);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<CourtType | 'all'>('all');
@@ -31,8 +31,8 @@ const Courts = () => {
   const [activeCourt, setActiveCourt] = useState<Court | null>(null);
 
   useEffect(() => {
-    fetchCourts();
-  }, [fetchCourts]);
+    fetchAll();
+  }, [fetchAll]);
 
   const filteredCourts = useMemo(() => {
     return courts.filter(court => {
@@ -64,7 +64,7 @@ const Courts = () => {
   };
   
   const handleDeleteClick = (court: Court) => {
-     deleteCourt(court.id);
+     remove(court.id);
   };
 
 

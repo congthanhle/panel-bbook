@@ -31,7 +31,8 @@ export const CourtCard: React.FC<CourtCardProps> = ({ court, onEdit, onPricing, 
     inactive: { badgeUrl: 'bg-slate-400', bgUrl: 'bg-slate-100 text-slate-600', label: 'Inactive' },
   };
 
-  const currentStatus = statusConfig[court.status] || statusConfig.inactive;
+  const statusKey = court.isActive ? 'active' : (court.status || 'inactive');
+  const currentStatus = statusConfig[statusKey] || statusConfig.inactive;
   const currentType = typeConfig[court.type] || { color: 'default', label: court.type };
 
   // Dropdown menu items for Admin

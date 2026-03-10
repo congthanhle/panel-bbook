@@ -69,7 +69,7 @@ export const CourtLockModal: React.FC<CourtLockModalProps> = ({ isOpen, onClose,
       open={isOpen}
       onCancel={onClose}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
       width={480}
     >
       <div className="space-y-6 mt-4">

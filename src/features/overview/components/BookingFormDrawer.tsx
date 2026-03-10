@@ -271,7 +271,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
       width={480}
       onClose={onClose}
       open={isOpen}
-      destroyOnClose
+      destroyOnHidden
       closeIcon={<div className="text-slate-400 hover:text-slate-700 transition-colors">✕</div>}
       styles={{
         header: { borderBottom: '1px solid #f1f5f9', padding: '24px' },
