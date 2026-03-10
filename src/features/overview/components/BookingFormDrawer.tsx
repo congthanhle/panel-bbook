@@ -296,7 +296,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
          </div>
       }
     >
-      <Spin spinning={isSubmitting} tip="Creating booking..." size="large">
+      <Spin spinning={isSubmitting} size="large">
         <div className="p-6">
            {/* Summary Card */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-8 shadow-sm">

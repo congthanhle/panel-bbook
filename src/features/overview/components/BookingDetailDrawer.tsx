@@ -421,7 +421,7 @@ export const BookingDetailDrawer: React.FC<BookingDetailDrawerProps> = ({
 
       {/* LOADED STATE */}
       {!isLoading && detail && (
-        <Spin spinning={actionLoading} tip="Processing…">
+        <Spin spinning={actionLoading}>
           <div className="p-6 space-y-6">
             {/* ── Header ── */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">

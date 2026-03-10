@@ -20,7 +20,7 @@ export const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {
   if (!isAuthenticated && token) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-50">
-        <Spin size="large" tip="Verifying session..." />
+        <Spin size="large" />
       </div>
     );
   }
