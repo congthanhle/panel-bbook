@@ -1,5 +1,7 @@
-import { Navigate, useLocation, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Navigate, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/authStore';
 import { Role } from '@/types/auth.types';
 import { Result, Button, Spin } from 'antd';
 
@@ -10,13 +12,21 @@ interface ProtectedRouteProps {
 export const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {
   const { isAuthenticated, token, hasRole } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Restore session when we have a persisted token but are not yet authenticated
+  useEffect(() => {
+    if (!isAuthenticated && token) {
+      useAuthStore.getState().restoreSession(navigate);
+    }
+  }, [isAuthenticated, token, navigate]);
 
   // If we are definitely not authenticated and have no token persisted, bounce immediately
   if (!isAuthenticated && !token) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If we have a token but aren't authenticated yet (e.g. restoreSession is running) -> wait
+  // If we have a token but aren't authenticated yet (restoreSession is running) -> wait
   if (!isAuthenticated && token) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-slate-50">
