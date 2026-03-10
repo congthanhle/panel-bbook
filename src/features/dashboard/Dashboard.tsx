@@ -3,7 +3,6 @@ import { Card, Select, Skeleton, Alert, Space } from 'antd';
 import { Calendar, DollarSign, Activity, TrendingUp } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { DashboardStats } from '@/types/dashboard.types';
-import axios from 'axios';
 import { PageWrapper } from '@/components/layout/PageWrapper';
 
 // Components
@@ -14,8 +13,7 @@ import { PeakHoursBarChart } from './components/PeakHoursBarChart';
 import { CourtUtilizationChart } from './components/CourtUtilizationChart';
 import { RecentBookingsTable } from './components/RecentBookingsTable';
 import { TopCustomersTable } from './components/TopCustomersTable';
-
-const API_URL = import.meta.env.VITE_API_BASE_URL || '';
+import { dashboardApi } from './api';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuthStore();
@@ -31,10 +29,8 @@ const Dashboard: React.FC = () => {
       setLoading(true);
       setError('');
       try {
-        const response = await axios.get(`${API_URL}/dashboard/stats`, {
-          params: { range: dateRange }
-        });
-        setData(response.data);
+        const stats = await dashboardApi.getFullDashboard({ period: dateRange as any });
+        setData(stats);
       } catch (err: any) {
         setError(err.message || 'Failed to fetch dashboard data');
       } finally {

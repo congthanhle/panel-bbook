@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import axios from 'axios';
+import { apiClient } from '@/lib/api-client';
 import { Product } from '@/types/product.types';
 
 interface ProductState {
@@ -13,8 +13,6 @@ interface ProductState {
   deleteProduct: (id: string) => Promise<void>;
 }
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || '';
-
 export const useProductStore = create<ProductState>((set) => ({
   products: [],
   isLoading: false,
@@ -23,8 +21,8 @@ export const useProductStore = create<ProductState>((set) => ({
   fetchProducts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get(`${API_URL}/products`);
-      set({ products: response.data, isLoading: false });
+      const data = await apiClient.get<Product[]>('/products');
+      set({ products: data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch products', isLoading: false });
     }
@@ -33,9 +31,9 @@ export const useProductStore = create<ProductState>((set) => ({
   createProduct: async (productData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`${API_URL}/products`, productData);
+      const data = await apiClient.post<Product>('/products', productData);
       set((state) => ({
-        products: [...state.products, response.data],
+        products: [...state.products, data],
         isLoading: false,
       }));
     } catch (error: any) {
@@ -47,10 +45,10 @@ export const useProductStore = create<ProductState>((set) => ({
   updateProduct: async (id, productData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`${API_URL}/products/${id}`, productData);
+      const data = await apiClient.patch<Product>(`/products/${id}`, productData);
       set((state) => ({
         products: state.products.map((p) =>
-          p.id === id ? response.data : p
+          p.id === id ? data : p
         ),
         isLoading: false,
       }));
@@ -63,7 +61,7 @@ export const useProductStore = create<ProductState>((set) => ({
   deleteProduct: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`${API_URL}/products/${id}`);
+      await apiClient.del(`/products/${id}`);
       set((state) => ({
         products: state.products.filter((p) => p.id !== id),
         isLoading: false,

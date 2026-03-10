@@ -27,7 +27,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const query = month ? `?month=${month}` : '';
-      const response = await axios.get(`/api/shifts${query}`);
+      const response = await axios.get(`/shifts${query}`);
       set({ shifts: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -37,7 +37,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   fetchMyShifts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get('/api/shifts/my');
+      const response = await axios.get('/shifts/my');
       set({ myShifts: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -47,7 +47,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   createShift: async (shiftData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/api/shifts', shiftData);
+      const response = await axios.post('/shifts', shiftData);
       set({ shifts: [...get().shifts, response.data], isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -58,7 +58,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   updateShift: async (id, shiftData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`/api/shifts/${id}`, shiftData);
+      const response = await axios.patch(`/shifts/${id}`, shiftData);
       set({ 
         shifts: get().shifts.map(s => s.id === id ? { ...s, ...response.data } : s),
         isLoading: false 
@@ -72,7 +72,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   deleteShift: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`/api/shifts/${id}`);
+      await axios.delete(`/shifts/${id}`);
       set({ shifts: get().shifts.filter(s => s.id !== id), isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -83,7 +83,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   assignStaffToShift: async (shiftId, staffId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`/api/shifts/${shiftId}/assign`, { staffId });
+      const response = await axios.post(`/shifts/${shiftId}/assign`, { staffId });
       set({
         shifts: get().shifts.map(s => s.id === shiftId ? response.data : s),
         isLoading: false
@@ -97,7 +97,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   removeStaffFromShift: async (shiftId, staffId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`/api/shifts/${shiftId}/remove`, { staffId });
+      const response = await axios.post(`/shifts/${shiftId}/remove`, { staffId });
       set({
         shifts: get().shifts.map(s => s.id === shiftId ? response.data : s),
         isLoading: false
@@ -111,7 +111,7 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   updateShiftStatus: async (id, status) => {
      set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`/api/shifts/${id}/status`, { status });
+      const response = await axios.patch(`/shifts/${id}/status`, { status });
       set({ 
         shifts: get().shifts.map(s => s.id === id ? { ...s, status: response.data.status } : s),
         isLoading: false 

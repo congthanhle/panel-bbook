@@ -22,7 +22,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   fetchStaff: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get('/api/staff');
+      const response = await axios.get('/staff');
       set({ staffList: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -31,7 +31,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   fetchCurrentProfile: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get('/api/staff/me');
+      const response = await axios.get('/staff/me');
       set({ currentStaffProfile: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -40,7 +40,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   addStaff: async (staffData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/api/staff', staffData);
+      const response = await axios.post('/staff', staffData);
       set({ staffList: [...get().staffList, response.data], isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
@@ -50,7 +50,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   updateStaff: async (id, staffData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`/api/staff/${id}`, staffData);
+      const response = await axios.patch(`/staff/${id}`, staffData);
       set({ 
         staffList: get().staffList.map(s => s.id === id ? { ...s, ...response.data } : s),
         currentStaffProfile: get().currentStaffProfile?.id === id ? { ...get().currentStaffProfile, ...response.data } : get().currentStaffProfile,
@@ -64,7 +64,7 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   deleteStaff: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`/api/staff/${id}`);
+      await axios.delete(`/staff/${id}`);
       set({ staffList: get().staffList.filter(s => s.id !== id), isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });

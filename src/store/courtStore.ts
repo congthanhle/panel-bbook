@@ -35,7 +35,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   fetchCourts: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.get('/api/courts');
+      const response = await axios.get('/courts');
       set({ courts: response.data, isLoading: false });
     } catch (error: any) {
       set({ error: error.message || 'Failed to fetch courts', isLoading: false });
@@ -45,7 +45,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   addCourt: async (courtData) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post('/api/courts', courtData);
+      const response = await axios.post('/courts', courtData);
       set(state => ({ 
         courts: [...state.courts, response.data],
         isLoading: false 
@@ -59,7 +59,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   updateCourt: async (id, updates) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.patch(`/api/courts/${id}`, updates);
+      const response = await axios.patch(`/courts/${id}`, updates);
       set(state => ({
         courts: state.courts.map(c => c.id === id ? { ...c, ...response.data } : c),
         selectedCourt: state.selectedCourt?.id === id ? { ...state.selectedCourt, ...response.data } : state.selectedCourt,
@@ -74,7 +74,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   deleteCourt: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      await axios.delete(`/api/courts/${id}`);
+      await axios.delete(`/courts/${id}`);
       set(state => ({
         courts: state.courts.filter(c => c.id !== id),
         selectedCourt: state.selectedCourt?.id === id ? null : state.selectedCourt,
@@ -91,7 +91,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   fetchPricing: async (courtId) => {
     set({ isPricingLoading: true });
     try {
-      const response = await axios.get(`/api/courts/${courtId}/pricing`);
+      const response = await axios.get(`/courts/${courtId}/pricing`);
       set(state => ({
         pricingRules: {
           ...state.pricingRules,
@@ -108,7 +108,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   addPricingRule: async (courtId, ruleData) => {
     set({ isPricingLoading: true });
     try {
-      const response = await axios.post(`/api/courts/${courtId}/pricing`, ruleData);
+      const response = await axios.post(`/courts/${courtId}/pricing`, ruleData);
       set(state => {
         const currentRules = state.pricingRules[courtId] || [];
         return {
@@ -128,7 +128,7 @@ export const useCourtStore = create<CourtState>((set) => ({
 
   updatePricingRule: async (ruleId, updates) => {
     try {
-      const response = await axios.patch(`/api/pricing/${ruleId}`, updates);
+      const response = await axios.patch(`/pricing/${ruleId}`, updates);
       const updatedRule = response.data;
       
       set(state => {
@@ -149,7 +149,7 @@ export const useCourtStore = create<CourtState>((set) => ({
   
   deletePricingRule: async (ruleId) => {
     try {
-      await axios.delete(`/api/pricing/${ruleId}`);
+      await axios.delete(`/pricing/${ruleId}`);
       set(state => {
          const newPricingRules = { ...state.pricingRules };
          let foundCourtId = null;

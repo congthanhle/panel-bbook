@@ -14,7 +14,7 @@ export interface DashboardQueryDto {
 
 export const dashboardApi = {
   getFullDashboard: (params: DashboardQueryDto) =>
-    apiClient.get<DashboardStats>("/dashboard", { params }),
+    apiClient.get<DashboardStats>("/dashboard/stats", { params }),
 
   getRevenueByDay: (dateFrom: string, dateTo: string) =>
     apiClient.get<RevenueData[]>("/dashboard/revenue", {
