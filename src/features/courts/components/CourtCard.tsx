@@ -67,20 +67,21 @@ export const CourtCard: React.FC<CourtCardProps> = ({ court, onEdit, onPricing, 
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
         {/* Status overlay badge */}
-        <div className="absolute top-4 left-4">
-          <div className={`px-2.5 py-1 rounded-full backdrop-blur-md bg-white/90 border border-white/20 shadow-sm flex items-center gap-1.5 text-xs font-semibold ${currentStatus.bgUrl}`}>
+        <div className="absolute top-4 left-4 z-10">
+          <div className={`px-2.5 py-1 rounded-full  border border-white/20 shadow-sm flex items-center gap-1.5 text-xs font-semibold ${currentStatus.bgUrl}`}>
              <span className={`w-2 h-2 rounded-full ${currentStatus.badgeUrl}`} />
              {currentStatus.label}
           </div>
         </div>
         {/* Admin context menu */}
         {isAdmin && (
-          <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100">
             <Dropdown menu={{ items: menuItems }} placement="bottomRight" trigger={['click']}>
               <Button 
                 type="text" 
                 icon={<MoreVertical size={18} className="text-white drop-shadow-md" />} 
-                className="bg-black/20 hover:bg-black/40 backdrop-blur-md border-0 w-8 h-8 rounded-full flex justify-center items-center"
+                className="bg-white hover:!bg-white border-0 w-8 h-8 rounded-full flex justify-center items-center"
+                onClick={(e) => e.stopPropagation()}
               />
             </Dropdown>
           </div>

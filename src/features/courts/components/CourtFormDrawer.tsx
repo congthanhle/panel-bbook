@@ -17,6 +17,7 @@ export const CourtFormDrawer: React.FC<CourtFormDrawerProps> = ({ isOpen, onClos
   const [form] = Form.useForm();
   const createCourt = useCourtStore(state => state.create);
   const updateCourt = useCourtStore(state => state.update);
+  const fetchAll = useCourtStore(state => state.fetchAll);
   const isLoading = useCourtStore(state => state.isLoading);
 
   useEffect(() => {
@@ -47,6 +48,7 @@ export const CourtFormDrawer: React.FC<CourtFormDrawerProps> = ({ isOpen, onClos
         await createCourt(createPayload);
       }
       onClose();
+      await fetchAll();
     } catch (error) {
       // Store handles toast
     }

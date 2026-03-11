@@ -3,32 +3,7 @@ import { Court, PriceRule } from '@/types/court.types';
 
 
 // Initial Mock Data
-export let courtsList: Court[] = [
-  {
-    id: 'c1',
-    name: 'Court 1 (Standard)',
-    type: 'badminton',
-    status: 'active',
-    description: 'A standard wooden floor court perfect for regular play.',
-    imageUrl: 'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-  },
-  {
-    id: 'c2',
-    name: 'Court 2 (Premium)',
-    type: 'badminton',
-    status: 'active',
-    description: 'Premium synthetic surface with enhanced lighting.',
-    imageUrl: 'https://images.unsplash.com/photo-1595435934249-5df7ed86e1c0?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-  },
-  {
-    id: 'c3',
-    name: 'Court 3 (VIP)',
-    type: 'tennis',
-    status: 'inactive',
-    description: 'Exclusive tennis court, currently under maintenance.',
-    imageUrl: 'https://images.unsplash.com/photo-1589883661923-6476cb0ae9f1?w=800&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
-  },
-];
+export let courtsList: Court[] = [];
 
 let pricingRulesList: PriceRule[] = [
   {
