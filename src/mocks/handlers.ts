@@ -1,9 +1,7 @@
 import { http, HttpResponse, delay } from 'msw';
-import { courtHandlers } from './courtHandlers';
 import { customerHandlers } from './customerHandlers';
 import { productHandlers } from './productHandlers';
 import { User } from '@/types/auth.types';
-import { Court } from '@/types/court.types';
 import { Staff } from '@/types/staff.types';
 import { DashboardStats } from '@/types/dashboard.types';
 import { Shift } from '@/types/shift.types';
@@ -14,27 +12,6 @@ const mockUser: User = {
   name: 'Admin User',
   role: 'admin',
 };
-
-const mockCourts: Court[] = [
-  {
-    id: 'crt_1',
-    name: 'Court 1 (Standard)',
-    type: 'badminton',
-    status: 'active',
-  },
-  {
-    id: 'crt_2',
-    name: 'Court 2 (Premium)',
-    type: 'badminton',
-    status: 'active',
-  },
-  {
-    id: 'crt_3',
-    name: 'Court 3 (Standard)',
-    type: 'tennis',
-    status: 'inactive',
-  },
-];
 
 const mockStaff: Staff[] = [
   {
@@ -144,23 +121,6 @@ export const handlers = [
     return HttpResponse.json(mockUser);
   }),
 
-  http.get(`${API_URL}/courts`, async () => {
-    await delay(600);
-    return HttpResponse.json(mockCourts);
-  }),
-
-  http.patch(`${API_URL}/courts/:id/status`, async ({ params, request }) => {
-    const { id } = params;
-    const body = await request.json() as { status: string };
-    
-    // update mockCourts
-    const court = mockCourts.find((c) => c.id === id);
-    if (court) {
-      court.status = body.status as any;
-    }
-
-    return HttpResponse.json({ success: true });
-  }),
 
   http.get(`${API_URL}/staff`, () => {
     return HttpResponse.json(mockStaff);
@@ -387,8 +347,6 @@ export const handlers = [
 
     return HttpResponse.json(mockDashboardStats);
   }),
-
-  ...courtHandlers,
   ...customerHandlers,
   ...productHandlers,
 ];
