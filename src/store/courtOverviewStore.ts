@@ -97,12 +97,56 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const formattedDate = date.format('YYYY-MM-DD');
-      const data = await overviewApi.getOverview(formattedDate);
+      const response = await overviewApi.getOverview(formattedDate);
+      
+      // The backend returns an array of courts, each with a nested `slots` array.
+      // We must flatten this into the Record<string, SlotCell> expected by the grid.
+      const rawCourts = (response as any).courts || [];
+      const flattenedSlots: Record<string, SlotCell> = {};
+      const mappedCourts: Court[] = [];
+
+      rawCourts.forEach((c: any) => {
+        mappedCourts.push({
+          id: c.courtId,
+          name: c.courtName,
+          type: c.courtType as any,
+          isActive: true // assuming active if returned from overview
+        });
+
+        const courtSlots = c.slots || [];
+        courtSlots.forEach((s: any) => {
+          const key = `${c.courtId}_${s.timeSlotId}`;
+          flattenedSlots[key] = {
+             courtId: c.courtId,
+             timeSlotId: s.timeSlotId,
+             status: s.status,
+             lockedReason: s.lockedReason,
+             booking: s.bookingId ? {
+                id: s.bookingId,
+                bookingCode: s.bookingCode,
+                customerName: s.customerName || 'Unknown',
+                customerInitial: s.customerName ? s.customerName.charAt(0).toUpperCase() : 'U',
+                phone: s.customerPhone,
+                status: s.bookingStatus,
+                paymentStatus: s.paymentStatus,
+                amount: 0 // Cannot easily derive from overview API alone
+             } : undefined
+          };
+        });
+      });
+
+      // Operating hours are required for the grid axes to generate. Since backend
+      // doesn't return this in getOverview, we define it based on generic business hours.
+      const operatingHours: OperatingHours = (response as any).operatingHours || {
+        openTime: '06:00',
+        closeTime: '22:00',
+        intervalMinutes: 30
+      };
 
       set({
-        slots: data.slots || {},
-        courts: data.courts || [],
-        operatingHours: data.operatingHours || null,
+        slots: flattenedSlots,
+        courts: mappedCourts,
+        operatingHours: operatingHours,
         isLoading: false,
       });
     } catch (error: any) {

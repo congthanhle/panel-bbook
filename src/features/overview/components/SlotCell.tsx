@@ -19,7 +19,7 @@ const SlotCellComponent: React.FC<SlotCellProps> = ({
   onClick
 }) => {
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'admin';
+  const canManage = user?.role === 'admin' || user?.role === 'staff';
   const selectedCells = useCourtOverviewStore(state => state.selectedCells);
   
   const cellId = `${courtId}_${timeSlotId}`;
@@ -75,7 +75,7 @@ const SlotCellComponent: React.FC<SlotCellProps> = ({
     if (status === 'locked' && data.lockedReason) {
       return `Locked: ${data.lockedReason}`;
     }
-    if (status === 'available' && isAdmin) {
+    if (status === 'available' && canManage) {
       return 'Click to Book or Lock';
     }
     return status.charAt(0).toUpperCase() + status.slice(1);
@@ -83,8 +83,8 @@ const SlotCellComponent: React.FC<SlotCellProps> = ({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isAdmin) {
-       onClick(data, e.ctrlKey || e.metaKey);
+    if (canManage) {
+       onClick(data || { courtId, timeSlotId, status: 'available' }, e.ctrlKey || e.metaKey);
     }
   };
 

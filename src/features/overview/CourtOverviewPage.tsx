@@ -19,6 +19,7 @@ const CourtOverviewPage: React.FC = () => {
   const toggleCellSelection = useCourtOverviewStore(state => state.toggleCellSelection);
   const addCellsToSelection = useCourtOverviewStore(state => state.addCellsToSelection);
   const clearSelection = useCourtOverviewStore(state => state.clearSelection);
+  const selectedCells = useCourtOverviewStore(state => state.selectedCells);
 
   const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
 
@@ -58,8 +59,12 @@ const CourtOverviewPage: React.FC = () => {
      if (isMulti) {
         toggleCellSelection(cellId);
      } else {
-        clearSelection();
-        addCellsToSelection([cellId]);
+        if (selectedCells.length === 1 && selectedCells[0] === cellId) {
+            clearSelection();
+        } else {
+            clearSelection();
+            addCellsToSelection([cellId]);
+        }
      }
   };
 
@@ -93,7 +98,7 @@ const CourtOverviewPage: React.FC = () => {
       className="flex flex-col h-full"
     >
       {/* Top Banner & Legend */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sticky top-0 z-10 bg-slate-50 border-b border-slate-200 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sticky top-0 z-10 border-b border-slate-200 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-4">
         
         {/* Status Chips */}
         <div className="flex flex-wrap items-center gap-2">

@@ -1,5 +1,4 @@
 import { http, HttpResponse, delay } from 'msw';
-import { overviewHandlers } from './overviewHandlers';
 import { courtHandlers } from './courtHandlers';
 import { customerHandlers } from './customerHandlers';
 import { productHandlers } from './productHandlers';
@@ -389,7 +388,6 @@ export const handlers = [
     return HttpResponse.json(mockDashboardStats);
   }),
 
-  ...overviewHandlers,
   ...courtHandlers,
   ...customerHandlers,
   ...productHandlers,

@@ -22,7 +22,7 @@ export const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({ onBookSele
   if (selectedCells.length === 0) return null;
 
   const canCancel = user?.role === 'admin' || user?.role === 'staff';
-  const hasAvailable = selectedCells.some(id => slots[id]?.status === 'available');
+  const hasAvailable = selectedCells.some(id => !slots[id] || slots[id]?.status === 'available');
   const hasLocked = selectedCells.some(id => slots[id]?.status === 'locked');
   const isSingleBookedSlot = selectedCells.length === 1 && slots[selectedCells[0]]?.status === 'booked';
 

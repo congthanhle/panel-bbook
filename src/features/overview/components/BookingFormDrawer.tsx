@@ -438,7 +438,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
                       <div key={idx} className="flex justify-between items-center text-sm">
                         <span className="text-slate-500">{item.label}</span>
                         <span className="font-medium text-slate-700">
-                          {item.amount.toLocaleString('vi-VN')}đ
+                          {(item?.amount || 0).toLocaleString('vi-VN')}đ
                         </span>
                       </div>
                     ))}
@@ -446,7 +446,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-slate-500">Court fee</span>
                         <span className="font-medium text-slate-700">
-                          {priceBreakdown.courtFee.toLocaleString('vi-VN')}đ
+                          {(priceBreakdown?.courtFee || 0).toLocaleString('vi-VN')}đ
                         </span>
                       </div>
                     )}
@@ -454,7 +454,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-slate-500">Total</span>
                       <span className="text-lg font-bold text-indigo-700">
-                        {(calculatedPrice || totalPrice).toLocaleString('vi-VN')}đ
+                        {((calculatedPrice ?? totalPrice) || 0).toLocaleString('vi-VN')}đ
                       </span>
                     </div>
                   </>
