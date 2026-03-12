@@ -3,6 +3,7 @@ import { Button, Space, Input } from 'antd';
 import { Lock, Unlock, X, Calendar, Ban } from 'lucide-react';
 import { useCourtOverviewStore } from '@/store/courtOverviewStore';
 import { useAuthStore } from '@/store/authStore';
+import dayjs from 'dayjs';
 
 interface BulkActionToolbarProps {
   onBookSelected: () => void;
@@ -14,6 +15,7 @@ export const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({ onBookSele
   const clearSelection = useCourtOverviewStore(state => state.clearSelection);
   const bulkLockSlots = useCourtOverviewStore(state => state.bulkLockSlots);
   const cancelBooking = useCourtOverviewStore(state => state.cancelBooking);
+  const selectedDate = useCourtOverviewStore(state => state.selectedDate);
   
   const [reason, setReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,7 +23,27 @@ export const BulkActionToolbar: React.FC<BulkActionToolbarProps> = ({ onBookSele
   
   if (selectedCells.length === 0) return null;
 
-  const canCancel = user?.role === 'admin' || user?.role === 'staff';
+  // Determine if the selected slot is in the past
+  const isSelectedSlotPast = () => {
+    if (selectedCells.length !== 1) return false;
+    const timeSlotId = selectedCells[0].split('_')[1];
+    
+    const today = dayjs().startOf('day');
+    const displayDate = selectedDate.startOf('day');
+    
+    if (displayDate.isBefore(today)) return true;
+    if (displayDate.isAfter(today)) return false;
+    
+    if (!timeSlotId) return false;
+    const hour = parseInt(timeSlotId.substring(0, 2), 10);
+    const minute = parseInt(timeSlotId.substring(2, 4), 10);
+    const now = dayjs();
+    const slotTime = dayjs().hour(hour).minute(minute).second(0);
+    return slotTime.isBefore(now);
+  };
+
+  const isPast = isSelectedSlotPast();
+  const canCancel = (user?.role === 'admin' || user?.role === 'staff') && !isPast;
   const hasAvailable = selectedCells.some(id => !slots[id] || slots[id]?.status === 'available');
   const hasLocked = selectedCells.some(id => slots[id]?.status === 'locked');
   const isSingleBookedSlot = selectedCells.length === 1 && slots[selectedCells[0]]?.status === 'booked';

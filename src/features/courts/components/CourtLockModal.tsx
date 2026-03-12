@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, DatePicker, Checkbox, Input, Button, message } from 'antd';
 import { Lock, AlertCircle, CalendarClock } from 'lucide-react';
-import { Court } from '@/types/court.types';
+import { Court, LockCourtDto } from '@/types/court.types';
+import { useCourtStore } from '@/store/courtStore';
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
@@ -13,6 +14,8 @@ interface CourtLockModalProps {
 }
 
 export const CourtLockModal: React.FC<CourtLockModalProps> = ({ isOpen, onClose, court }) => {
+  const lockCourt = useCourtStore(state => state.lockCourt);
+  
   const [dateRange, setDateRange] = useState<any>(null);
   const [lockAllSlots, setLockAllSlots] = useState(true);
   const [reason, setReason] = useState('');
@@ -35,24 +38,22 @@ export const CourtLockModal: React.FC<CourtLockModalProps> = ({ isOpen, onClose,
 
     setIsSubmitting(true);
     try {
-      // In a real app, this would dispatch to an endpoint like /api/courts/:id/lock
-      // which would create lock records spanning the selected dates
-      const payload = {
-        courtId: court.id,
+      const payload: LockCourtDto = {
         startDate: dateRange[0].format('YYYY-MM-DD'),
         endDate: dateRange[1].format('YYYY-MM-DD'),
-        allSlots: lockAllSlots,
-        reason: reason
+        action: 'lock',
+        reason: reason,
+        // If !lockAllSlots, ideally we'd collect timeSlotIds, but the UI advises
+        // manual selection on Overview page if they want specific slots.
+        // Sending undefined timeSlotIds tells the backend to lock all 32 slots.
+        timeSlotIds: lockAllSlots ? undefined : [] 
       };
       
-      console.log('Dispatching lock to backend:', payload);
-      // Simulate API call for the mock since we don't have a specific bulk date lock endpoint in MSW yet
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await lockCourt(court.id, payload);
       
-      message.success(`Court successfully locked for ${dateRange[0].format('MMM D')} - ${dateRange[1].format('MMM D')}`);
       onClose();
     } catch (error) {
-      message.error('Failed to lock court');
+      // Error is handled by the store
     } finally {
       setIsSubmitting(false);
     }

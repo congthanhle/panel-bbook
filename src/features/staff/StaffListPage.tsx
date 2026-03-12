@@ -125,7 +125,7 @@ const StaffListPage = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string) => <Tag color={role === 'admin' ? 'purple' : 'blue'}>{role.toUpperCase()}</Tag>,
+      render: (role: string) => <Tag color={role === 'admin' ? 'purple' : 'blue'}>{role?.toUpperCase()}</Tag>,
     },
     {
       title: 'Phone',
@@ -136,7 +136,7 @@ const StaffListPage = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => <Tag color={status === 'active' ? 'success' : 'default'}>{status.toUpperCase()}</Tag>,
+      render: (status: string) => <Tag color={status === 'active' ? 'success' : 'default'}>{status?.toUpperCase()}</Tag>,
     },
     {
       title: 'Hire Date',
@@ -147,12 +147,15 @@ const StaffListPage = () => {
     {
       title: 'Monthly Salary',
       key: 'salary',
-      render: (_: any, record: Staff) => (
-        <div className="flex flex-col">
-          <span className="font-medium">${record.salary.toLocaleString()}</span>
-          <span className="text-xs text-slate-500">{record.salaryType === 'monthly' ? '/ mo' : '/ hr'}</span>
-        </div>
-      )
+      render: (_: any, record: Staff) => {
+        if (record.salary === undefined || record.salary === null) return <span className="text-slate-400">—</span>;
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium">${record.salary.toLocaleString()}</span>
+            <span className="text-xs text-slate-500">{record.salaryType === 'monthly' ? '/ mo' : '/ hr'}</span>
+          </div>
+        );
+      }
     },
     {
       title: 'Actions',

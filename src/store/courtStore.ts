@@ -39,6 +39,17 @@ interface CourtState {
   lockCourt: (courtId: string, dto: LockCourtDto) => Promise<void>;
 }
 
+// Helper to reliably map snake_case DB fields to the camelCase PriceRule type
+const mapPriceRule = (r: any): PriceRule => ({
+  id: r.id,
+  courtId: r.court_id || r.courtId,
+  dayType: r.day_type || r.dayType,
+  specificDate: r.specific_date || r.specificDate,
+  timeStart: r.time_start || r.timeStart,
+  timeEnd: r.time_end || r.timeEnd,
+  price: r.price,
+});
+
 export const useCourtStore = create<CourtState>((set) => ({
   courts: [],
   totalCourts: 0,
@@ -141,7 +152,8 @@ export const useCourtStore = create<CourtState>((set) => ({
   fetchPriceRules: async (courtId) => {
     set({ isPricingLoading: true });
     try {
-      const rules = await courtsApi.getPriceRules(courtId);
+      const rawRules = await courtsApi.getPriceRules(courtId);
+      const rules = (rawRules as any[]).map(mapPriceRule);
       set((s) => ({
         pricingRules: { ...s.pricingRules, [courtId]: rules },
         isPricingLoading: false,
@@ -156,7 +168,8 @@ export const useCourtStore = create<CourtState>((set) => ({
   addRule: async (courtId, dto) => {
     set({ isPricingLoading: true });
     try {
-      const rule = await courtsApi.addPriceRule(courtId, dto);
+      const rawRule = await courtsApi.addPriceRule(courtId, dto);
+      const rule = mapPriceRule(rawRule);
       set((s) => {
         const current = s.pricingRules[courtId] || [];
         return {
@@ -176,7 +189,8 @@ export const useCourtStore = create<CourtState>((set) => ({
   updateRule: async (ruleId, dto) => {
     set({ isPricingLoading: true });
     try {
-      const updated = await courtsApi.updatePriceRule(ruleId, dto);
+      const rawUpdated = await courtsApi.updatePriceRule(ruleId, dto);
+      const updated = mapPriceRule(rawUpdated);
       set((s) => {
         const courtId = updated.courtId;
         const current = s.pricingRules[courtId] || [];

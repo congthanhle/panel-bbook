@@ -19,15 +19,19 @@ export interface SlotStatusUpdateDto {
   courtId: string;
   date: string;
   timeSlotId: string;
-  action: "lock" | "unlock";
+  status: "available" | "locked" | "maintenance";
   reason?: string;
 }
 
 /** PATCH /overview/slots/bulk */
 export interface BulkSlotUpdateDto {
-  slots: string[];
-  action: "lock" | "unlock";
-  reason?: string;
+  date: string;
+  slots: {
+    courtId: string;
+    timeSlotId: string;
+    status: "available" | "locked" | "maintenance";
+    reason?: string;
+  }[];
 }
 
 export interface BulkUpdateResult {
@@ -47,12 +51,16 @@ export interface MonthLockStatus {
 export interface CreateBookingDto {
   courtId: string;
   date: string;
-  selectedCells: string[];
-  customerName: string;
-  phone: string;
-  paymentMode: "cash" | "transfer" | "card";
-  downPayment?: number;
-  totalAmount: number;
+  startTime: string;
+  endTime: string;
+  customerId?: string;
+  customerPhone?: string;
+  customerName?: string;
+  paidAmount?: number;
+  notes?: string;
+  services?: { productId: string; quantity: number }[];
+  /** Frontend-only: used for optimistic UI updates, not sent to API */
+  _selectedCells?: string[];
 }
 
 /** Service add DTO */
@@ -70,12 +78,15 @@ export interface UpdatePaymentDto {
 
 /** Customer lookup response */
 export interface CustomerLookupDto {
-  id: string;
-  name: string;
-  phone: string;
-  email?: string;
-  membershipTier?: string;
-  totalVisits?: number;
+  found: boolean;
+  customer?: {
+    id: string;
+    name: string;
+    phone: string;
+    email?: string;
+    membershipTier?: string;
+    totalVisits?: number;
+  };
 }
 
 /** GET /courts/:courtId/calculate-price */
@@ -146,13 +157,13 @@ export const overviewApi = {
 
   // Month lock management
   getMonthStatus: (yearMonth: string) =>
-    apiClient.get<MonthLockStatus>("/overview/month-status", { yearMonth }),
+    apiClient.get<MonthLockStatus>("/overview/month-locks", { yearMonth }),
 
   lockMonth: (yearMonth: string) =>
-    apiClient.post("/overview/month/lock", { yearMonth }),
+    apiClient.post("/overview/month-locks/lock", { yearMonth }),
 
   unlockMonth: (yearMonth: string) =>
-    apiClient.post("/overview/month/unlock", { yearMonth }),
+    apiClient.post("/overview/month-locks/unlock", { yearMonth }),
 
   // Booking CRUD (called from drawers within overview)
   createBooking: (dto: CreateBookingDto) =>

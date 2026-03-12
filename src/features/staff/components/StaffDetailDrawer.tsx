@@ -51,7 +51,7 @@ export const StaffDetailDrawer = ({ visible, onClose, staff, onEdit, loading }: 
               <div className="text-slate-500 mb-2">{staff.role.toUpperCase()}</div>
               <div>
                 <Tag color={staff.status === 'active' ? 'success' : 'default'} className="m-0">
-                  {staff.status.toUpperCase()}
+                  {staff.status?.toUpperCase()}
                 </Tag>
                 {isAdmin && staff.salaryType && (
                   <Tag className="ml-2 border-slate-300 text-slate-600 bg-slate-50">
@@ -102,12 +102,14 @@ export const StaffDetailDrawer = ({ visible, onClose, staff, onEdit, loading }: 
               
               {isAdmin && (
                 <>
-                  <Descriptions.Item label="Salary">
-                    <span className="font-medium flex items-center gap-1">
-                      <MoneyCollectOutlined className="text-green-600" />
-                      ${staff.salary.toLocaleString()} <span className="text-slate-400 font-normal ml-1">/{staff.salaryType === 'monthly' ? 'mo' : 'hr'}</span>
-                    </span>
-                  </Descriptions.Item>
+                  {staff.salary !== undefined && staff.salary !== null && (
+                    <Descriptions.Item label="Salary">
+                      <span className="font-medium flex items-center gap-1">
+                        <MoneyCollectOutlined className="text-green-600" />
+                        ${staff.salary.toLocaleString()} <span className="text-slate-400 font-normal ml-1">/{staff.salaryType === 'monthly' ? 'mo' : 'hr'}</span>
+                      </span>
+                    </Descriptions.Item>
+                  )}
                   <Descriptions.Item label="Notes">
                     {staff.notes || <span className="text-slate-400 italic">No notes provided</span>}
                   </Descriptions.Item>

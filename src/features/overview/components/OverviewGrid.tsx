@@ -34,11 +34,42 @@ export const OverviewGrid: React.FC<OverviewGridProps> = ({ onCellClick }) => {
   const slots = useCourtOverviewStore(state => state.slots);
   const operatingHours = useCourtOverviewStore(state => state.operatingHours);
   const isLoading = useCourtOverviewStore(state => state.isLoading);
+  const addCellsToSelection = useCourtOverviewStore(state => state.addCellsToSelection);
   
   // Dynamically constructed labels memoized 
   const timeLabels = React.useMemo(() => generateTimeAxis(operatingHours), [operatingHours]);
   
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Handle clicking a Court Name (Row Selection)
+  const handleCourtClick = (courtId: string) => {
+    const cellsToSelect: string[] = [];
+    timeLabels.forEach(time => {
+      const cellId = `${courtId}_${time.id}`;
+      const cellData = slots[cellId];
+      if (!cellData || cellData.status !== 'booked') {
+        cellsToSelect.push(cellId);
+      }
+    });
+    if (cellsToSelect.length > 0) {
+      addCellsToSelection(cellsToSelect);
+    }
+  };
+
+  // Handle clicking a Time Header (Column Selection)
+  const handleTimeClick = (timeId: string) => {
+    const cellsToSelect: string[] = [];
+    courts.forEach(court => {
+      const cellId = `${court.id}_${timeId}`;
+      const cellData = slots[cellId];
+      if (!cellData || cellData.status !== 'booked') {
+        cellsToSelect.push(cellId);
+      }
+    });
+    if (cellsToSelect.length > 0) {
+      addCellsToSelection(cellsToSelect);
+    }
+  };
 
   if (isLoading && Object.keys(slots).length === 0) {
     return (
@@ -56,7 +87,7 @@ export const OverviewGrid: React.FC<OverviewGridProps> = ({ onCellClick }) => {
 
   return (
     <div 
-      className="w-full bg-white rounded-2xl shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden flex flex-col relative"
+      className="w-full bg-white shadow-[0_4px_24px_-8px_rgba(0,0,0,0.05)] border border-slate-100 overflow-hidden flex flex-col relative"
       ref={containerRef}
     >
       {/* Scrollable Container */}
@@ -76,9 +107,11 @@ export const OverviewGrid: React.FC<OverviewGridProps> = ({ onCellClick }) => {
           {timeLabels.map(time => (
             <div 
               key={time.id} 
-              className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 flex items-center justify-center py-3 px-2 text-center shadow-[0_1px_3px_0_rgba(0,0,0,0.02)]"
+              onClick={() => handleTimeClick(time.id)}
+              className="sticky top-0 z-20 bg-slate-50 border-b border-r border-slate-200 flex items-center justify-center py-3 px-2 text-center shadow-[0_1px_3px_0_rgba(0,0,0,0.02)] cursor-pointer hover:bg-indigo-50/50 transition-colors group"
+              title="Click to select all available slots at this time"
             >
-              <div className="text-xs font-semibold tracking-wider text-slate-800 whitespace-nowrap">{time.label}</div>
+              <div className="text-xs font-semibold tracking-wider text-slate-800 whitespace-nowrap group-hover:text-indigo-600 transition-colors">{time.label}</div>
             </div>
           ))}
 
@@ -86,9 +119,13 @@ export const OverviewGrid: React.FC<OverviewGridProps> = ({ onCellClick }) => {
           {courts.map((court) => (
             <React.Fragment key={court.id}>
               {/* Court Label Column (Sticky left) */}
-              <div className="sticky left-0 z-30 bg-slate-50/90 backdrop-blur-sm border-b border-r border-slate-200 p-4 flex flex-col justify-center items-start shadow-[1px_0_3px_0_rgba(0,0,0,0.02)] min-h-[64px]">
-                 <div className="font-bold text-slate-800 tracking-tight text-sm whitespace-nowrap overflow-hidden text-ellipsis w-full">{court.name}</div>
-                 <div className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-0.5">{court.type}</div>
+              <div 
+                onClick={() => handleCourtClick(court.id)}
+                className="sticky left-0 z-30 bg-slate-50/90 backdrop-blur-sm border-b border-r border-slate-200 p-4 flex flex-col justify-center items-start shadow-[1px_0_3px_0_rgba(0,0,0,0.02)] min-h-[64px] cursor-pointer hover:bg-indigo-50/80 transition-colors group"
+                title="Click to select all available slots for this court"
+              >
+                 <div className="font-bold text-slate-800 tracking-tight text-sm whitespace-nowrap overflow-hidden text-ellipsis w-full group-hover:text-indigo-700 transition-colors">{court.name}</div>
+                 <div className="text-[11px] font-medium text-slate-500 uppercase tracking-widest mt-0.5 group-hover:text-indigo-500/80 transition-colors">{court.type}</div>
               </div>
 
               {/* Time Slot Columns for this Court */}

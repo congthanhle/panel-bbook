@@ -43,7 +43,7 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  setDate: (date) => set({ selectedDate: date }),
+  setDate: (date) => set({ selectedDate: date, slots: {}, courts: [], selectedCells: [] }),
   
   setIsSelecting: (isSelecting) => set({ isSelecting }),
   
@@ -94,7 +94,7 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
   }),
 
   loadOverviewData: async (date) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, slots: {} });
     try {
       const formattedDate = date.format('YYYY-MM-DD');
       const response = await overviewApi.getOverview(formattedDate);
@@ -115,10 +115,23 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
 
         const courtSlots = c.slots || [];
         courtSlots.forEach((s: any) => {
-          const key = `${c.courtId}_${s.timeSlotId}`;
+          // The DB returns slot_id as a UUID, but the grid uses HHmm format
+          // from generateTimeAxis (e.g., '0600'). Derive the key from startTime.
+          const timeSlotId = s.timeSlotId;
+          let gridTimeId = timeSlotId;
+          
+          // If startTime is available (e.g., '06:00'), convert to HHmm format
+          if (s.startTime) {
+            gridTimeId = s.startTime.replace(':', '').substring(0, 4);
+          } else if (s.label) {
+            // label is like '06:00', also usable
+            gridTimeId = s.label.replace(':', '').substring(0, 4);
+          }
+
+          const key = `${c.courtId}_${gridTimeId}`;
           flattenedSlots[key] = {
              courtId: c.courtId,
-             timeSlotId: s.timeSlotId,
+             timeSlotId: gridTimeId,
              status: s.status,
              lockedReason: s.lockedReason,
              booking: s.bookingId ? {
@@ -129,7 +142,7 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
                 phone: s.customerPhone,
                 status: s.bookingStatus,
                 paymentStatus: s.paymentStatus,
-                amount: 0 // Cannot easily derive from overview API alone
+                amount: 0
              } : undefined
           };
         });
@@ -176,8 +189,9 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
     }
 
     try {
-      // 2. Real API call
-      await overviewApi.updateSlot({ courtId, date, timeSlotId, action, reason });
+      // 2. Real API call — send 'status' not 'action' to match backend
+      const status = action === 'lock' ? 'locked' : 'available';
+      await overviewApi.updateSlot({ courtId, date, timeSlotId, status, reason });
       // 3. Success: toast (subtle, not disruptive)
       message.success(action === 'lock' ? 'Slot locked' : 'Slot unlocked');
     } catch (err) {
@@ -199,7 +213,7 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
     set((state) => {
       const newSlots = { ...state.slots };
       payload.slots.forEach((key) => {
-        if (newSlots[key]) {
+        if (newSlots[key] && newSlots[key].status !== 'booked') {
           newSlots[key] = {
             ...newSlots[key],
             status: payload.action === 'lock' ? 'locked' : 'available',
@@ -214,10 +228,24 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
 
     try {
       // 2. Real API call
+      const formattedDate = get().selectedDate.format('YYYY-MM-DD');
+      
+      // Filter out any accidentally passed booked slots
+      const validSlots = payload.slots.filter(key => get().slots[key]?.status !== 'booked');
+      
+      const apiPayload = validSlots.map(key => {
+        const [courtId, timeSlotId] = key.split('_');
+        return {
+          courtId,
+          timeSlotId,
+          status: (payload.action === 'lock' ? 'locked' : 'available') as 'available' | 'locked' | 'maintenance',
+          reason: payload.action === 'lock' ? payload.reason : undefined
+        };
+      });
+
       await overviewApi.bulkUpdateSlots({
-        slots: payload.slots,
-        action: payload.action,
-        reason: payload.reason,
+        date: formattedDate,
+        slots: apiPayload
       });
       message.success(
         payload.action === 'lock'
@@ -234,8 +262,11 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
   },
 
   createBooking: async (dto) => {
-    const coveredKeys = dto.selectedCells;
+    const coveredKeys = dto._selectedCells || [];
     const prevSlots = { ...get().slots };
+
+    // Strip frontend-only field before sending to API
+    const { _selectedCells, ...apiDto } = dto;
 
     // 1. Optimistically mark all covered slots as booked
     set((state) => {
@@ -249,7 +280,7 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
     });
 
     try {
-      const booking = await overviewApi.createBooking(dto);
+      const booking = await overviewApi.createBooking(apiDto);
 
       // 2. Update cells with real booking data (code, customerName)
       set((state) => {
@@ -261,11 +292,11 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
               booking: {
                 id: booking.id,
                 bookingCode: booking.bookingCode,
-                customerName: booking.customerName || dto.customerName,
+                customerName: booking.customerName || dto.customerName || 'Customer',
                 customerInitial: (booking.customerName || dto.customerName || 'C').charAt(0).toUpperCase(),
-                phone: booking.phone || dto.phone,
-                amount: dto.totalAmount / coveredKeys.length,
-                paymentStatus: dto.paymentMode === 'cash' && !dto.downPayment ? 'pending' : 'paid',
+                phone: booking.phone || dto.customerPhone,
+                amount: 0,
+                paymentStatus: (dto.paidAmount || 0) > 0 ? 'paid' : 'pending',
                 status: 'confirmed',
               },
             };

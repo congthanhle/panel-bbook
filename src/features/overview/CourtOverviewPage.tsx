@@ -9,6 +9,7 @@ import { useCourtOverviewStore } from '@/store/courtOverviewStore';
 import { OverviewGrid } from './components/OverviewGrid';
 import { BulkActionToolbar } from './components/BulkActionToolbar';
 import { BookingFormDrawer } from './components/BookingFormDrawer';
+import { BookingDetailDrawer } from './components/BookingDetailDrawer';
 import { SlotCell } from '@/types/overview.types';
 
 const CourtOverviewPage: React.FC = () => {
@@ -22,6 +23,9 @@ const CourtOverviewPage: React.FC = () => {
   const selectedCells = useCourtOverviewStore(state => state.selectedCells);
 
   const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const [selectedBookingCell, setSelectedBookingCell] = useState<string | null>(null);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
 
   // Load data when date changes
   useEffect(() => {
@@ -56,6 +60,14 @@ const CourtOverviewPage: React.FC = () => {
 
   const handleCellClick = (cellData: SlotCell, isMulti: boolean) => {
      const cellId = `${cellData.courtId}_${cellData.timeSlotId}`;
+     // Handle clicking booked slots: open details drawer, but never multi-select them
+     if (cellData.status === 'booked') {
+        setSelectedBookingCell(cellId);
+        setSelectedBookingId(cellData.booking?.id || null);
+        setDetailDrawerOpen(true);
+        return;
+     }
+     
      if (isMulti) {
         toggleCellSelection(cellId);
      } else {
@@ -151,6 +163,17 @@ const CourtOverviewPage: React.FC = () => {
       <BookingFormDrawer 
         isOpen={bookingDrawerOpen} 
         onClose={() => setBookingDrawerOpen(false)} 
+      />
+
+      <BookingDetailDrawer
+        isOpen={detailDrawerOpen}
+        onClose={() => {
+          setDetailDrawerOpen(false);
+          setSelectedBookingCell(null);
+          setSelectedBookingId(null);
+        }}
+        bookingId={selectedBookingId}
+        cellKey={selectedBookingCell}
       />
     </PageWrapper>
   );

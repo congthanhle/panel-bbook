@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Drawer, Skeleton, Button, Modal, Input, Divider, InputNumber, Select,
-  Tag, Spin, message, Table, Typography, Popconfirm,
+  Tag, Spin, message, Table, Typography, Popconfirm, Tooltip
 } from 'antd';
 import {
   CheckCircle, XCircle, LogIn, Package, CreditCard, Phone, Hash,
@@ -11,6 +11,7 @@ import {
   overviewApi, BookingDetail, BookingService, AddServiceDto,
 } from '@/features/overview/api';
 import { Product } from '@/types/product.types';
+import dayjs from 'dayjs';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -41,7 +42,7 @@ const bookingStatusConfig: Record<string, { label: string; color: string }> = {
   cancelled: { label: 'Cancelled', color: 'red' },
 };
 
-const fmt = (n: number) => n.toLocaleString('vi-VN');
+const fmt = (n?: number | null) => (n || 0).toLocaleString('vi-VN');
 
 // ---------------------------------------------------------------------------
 // Props
@@ -307,6 +308,7 @@ export const BookingDetailDrawer: React.FC<BookingDetailDrawerProps> = ({
   // RENDER HELPERS
   // -------------------------------------------------------------------------
   const isTerminal = detail?.status === 'completed' || detail?.status === 'cancelled';
+  const isPast = detail ? dayjs(`${detail.date} ${detail.startTime}`).isBefore(dayjs()) : false;
 
   const serviceColumns = [
     {
@@ -427,7 +429,7 @@ export const BookingDetailDrawer: React.FC<BookingDetailDrawerProps> = ({
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xl shrink-0">
-                  {detail.customerName.charAt(0).toUpperCase()}
+                  {detail.customerName?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -490,15 +492,29 @@ export const BookingDetailDrawer: React.FC<BookingDetailDrawerProps> = ({
                     Complete
                   </Button>
                 )}
-                <Button
-                  danger
-                  icon={<XCircle size={16} />}
-                  size="large"
-                  className="font-medium"
-                  onClick={() => setShowCancelForm(true)}
-                >
-                  Cancel
-                </Button>
+                {isPast ? (
+                  <Tooltip title="Cannot cancel past bookings">
+                    <Button
+                      danger
+                      icon={<XCircle size={16} />}
+                      size="large"
+                      className="font-medium"
+                      disabled
+                    >
+                      Cancel
+                    </Button>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    danger
+                    icon={<XCircle size={16} />}
+                    size="large"
+                    className="font-medium"
+                    onClick={() => setShowCancelForm(true)}
+                  >
+                    Cancel
+                  </Button>
+                )}
               </div>
             )}
 

@@ -31,3 +31,14 @@ export interface Shift {
   startTime: string;
   endTime: string;
 }
+
+export interface StaffQueryDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+  status?: string;
+}
+
+export type CreateStaffDto = Omit<Staff, 'id'>;
+export type UpdateStaffDto = Partial<CreateStaffDto>;

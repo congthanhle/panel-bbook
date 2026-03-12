@@ -46,17 +46,19 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
   
   // Calculate summary details
   const totalSlotsCount = cellsToBook.length;
-  const totalPrice = cellsToBook.reduce((acc, cellId) => {
+  const totalPrice = useMemo(() => cellsToBook.reduce((acc, cellId) => {
      return acc + (slots[cellId]?.price || 0);
-  }, 0);
+  }, 0), [cellsToBook, slots]);
 
   // Group cells by court for timeline view, and sort chronologically
-  const sortedCells = [...cellsToBook].sort((a, b) => {
-    // a = courtId_timeSlotId
+  const sortedCells = useMemo(() => [...cellsToBook].sort((a, b) => {
     const timeA = a.split('_')[1];
     const timeB = b.split('_')[1];
     return parseInt(timeA) - parseInt(timeB);
-  });
+  }), [cellsToBook]);
+
+  // Stable key for the selected cells to use as useEffect dependency
+  const cellsKey = useMemo(() => sortedCells.join(','), [sortedCells]);
   
   const cellsByCourt = sortedCells.reduce((acc, cellId) => {
     const [courtId, timeId] = cellId.split('_');
@@ -126,17 +128,16 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
       setIsPhoneLoading(true);
       try {
         const res = await overviewApi.lookupByPhone(phoneValue);
-        // Assuming res returns a DTO with { id, name, membershipTier } or similar
-        setCustomerLookupStatus('found');
-        setCustomerTier(res.membershipTier || 'Standard');
-        form.setFieldValue('customerName', res.name);
-      } catch (err: any) {
-        if (err.response?.status === 404) {
-          setCustomerLookupStatus('not-found');
-          form.setFieldValue('customerName', ''); 
+        if (res.found && res.customer) {
+          setCustomerLookupStatus('found');
+          setCustomerTier(res.customer.membershipTier || 'Standard');
+          form.setFieldValue('customerName', res.customer.name);
         } else {
-          setCustomerLookupStatus('error');
+          setCustomerLookupStatus('not-found');
+          form.setFieldValue('customerName', '');
         }
+      } catch (err: any) {
+        setCustomerLookupStatus('error');
       } finally {
         setIsPhoneLoading(false);
       }
@@ -214,7 +215,7 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
       });
 
     return () => abortController.abort();
-  }, [isOpen, sortedCells, selectedDate, totalPrice, form]);
+  }, [isOpen, cellsKey, selectedDate]);
 
   const handleSubmit = async (values: any) => {
     if (hasConflicts) {
@@ -228,15 +229,22 @@ export const BookingFormDrawer: React.FC<BookingFormDrawerProps> = ({ isOpen, on
       const firstCourtId = cellsToBook[0]?.split('_')[0] || '';
       const date = selectedDate.format('YYYY-MM-DD');
 
+      // Derive start/end times from sorted cells
+      const firstTimeId = sortedCells[0]?.split('_')[1] || '';
+      const lastTimeId = sortedCells[sortedCells.length - 1]?.split('_')[1] || '';
+      const endTimeId = getEndTimeId(lastTimeId, 1);
+
+      const toHHmm = (id: string) => `${id.substring(0, 2)}:${id.substring(2)}`;
+
       const dto: CreateBookingDto = {
         courtId: firstCourtId,
         date,
-        selectedCells: cellsToBook,
+        startTime: toHHmm(firstTimeId),
+        endTime: toHHmm(endTimeId),
         customerName: values.customerName,
-        phone: values.phone,
-        paymentMode: values.paymentMode,
-        downPayment: values.downPayment || 0,
-        totalAmount: calculatedPrice || values.totalAmount,
+        customerPhone: values.phone,
+        paidAmount: values.downPayment || 0,
+        _selectedCells: cellsToBook,
       };
       
       await createBooking(dto);
