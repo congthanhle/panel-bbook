@@ -10,7 +10,7 @@ interface StaffState {
   error: string | null;
   init: (user: User) => void;
   fetchStaff: () => Promise<void>;
-  fetchCurrentProfile: () => Promise<void>;
+  fetchCurrentProfile: (force?: boolean) => Promise<void>;
   addStaff: (staffData: Omit<Staff, 'id'>) => Promise<void>;
   updateStaff: (id: string, staffData: Partial<Staff>) => Promise<void>;
   deleteStaff: (id: string) => Promise<void>;
@@ -38,7 +38,10 @@ export const useStaffStore = create<StaffState>((set, get) => ({
       set({ error: error.message, isLoading: false });
     }
   },
-  fetchCurrentProfile: async () => {
+  fetchCurrentProfile: async (force = false) => {
+    const { currentStaffProfile } = get();
+    if (currentStaffProfile && !force) return;
+
     set({ isLoading: true, error: null });
     try {
       const currentStaffProfile = await staffApi.getMe();

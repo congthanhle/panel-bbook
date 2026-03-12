@@ -16,9 +16,12 @@ const MyProfilePage = () => {
   const { fetchMyShifts } = useShiftStore();
 
   useEffect(() => {
-    fetchCurrentProfile();
+    // only fetch if we don't have it yet to prevent spamming /me
+    if (!currentStaffProfile) {
+      fetchCurrentProfile();
+    }
     fetchMyShifts();
-  }, [fetchCurrentProfile, fetchMyShifts]);
+  }, [currentStaffProfile, fetchCurrentProfile, fetchMyShifts]);
 
   const handleEditClick = () => {
     if (currentStaffProfile) {
@@ -62,7 +65,7 @@ const MyProfilePage = () => {
             ) : (
               <Avatar 
                 size={120} 
-                src={currentStaffProfile.avatar} 
+                src={currentStaffProfile.avatarUrl} 
                 icon={<UserOutlined />} 
                 className="mb-4 border-4 border-white shadow-md bg-blue-100 text-blue-500"
               />
@@ -78,8 +81,8 @@ const MyProfilePage = () => {
                 </p>
                 <div className="flex justify-center gap-2 mb-6">
                   <Tag color="blue" className="px-3 py-1 rounded-full text-sm">{currentStaffProfile.role.toUpperCase()}</Tag>
-                  <Tag color={currentStaffProfile.status === 'active' ? 'success' : 'default'} className="px-3 py-1 rounded-full text-sm">
-                    {currentStaffProfile.status.toUpperCase()}
+                  <Tag color={currentStaffProfile.isActive ? 'success' : 'default'} className="px-3 py-1 rounded-full text-sm">
+                    {currentStaffProfile.isActive ? 'ACTIVE' : 'INACTIVE'}
                   </Tag>
                 </div>
               </div>
@@ -145,19 +148,19 @@ const MyProfilePage = () => {
              {isLoading || !currentStaffProfile ? (
               <Skeleton active paragraph={{ rows: 2 }} />
             ) : (
-              currentStaffProfile.bankAccount ? (
+              (currentStaffProfile.bankName || currentStaffProfile.bankAccountNumber) ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50 p-5 rounded-xl border border-slate-100">
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Bank Name</div>
-                    <div className="font-semibold text-slate-800">{currentStaffProfile.bankAccount.bankName}</div>
+                    <div className="font-semibold text-slate-800">{currentStaffProfile.bankName}</div>
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Account Number</div>
-                    <div className="font-semibold tracking-wider text-slate-800">{currentStaffProfile.bankAccount.accountNumber}</div>
+                    <div className="font-semibold tracking-wider text-slate-800">{currentStaffProfile.bankAccountNumber}</div>
                   </div>
                   <div>
                     <div className="text-xs text-slate-500 mb-1">Account Name</div>
-                    <div className="font-semibold text-slate-800 uppercase">{currentStaffProfile.bankAccount.accountName}</div>
+                    <div className="font-semibold text-slate-800 uppercase">{currentStaffProfile.bankAccountName}</div>
                   </div>
                 </div>
               ) : (

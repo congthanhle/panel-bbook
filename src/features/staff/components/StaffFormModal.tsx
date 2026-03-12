@@ -16,14 +16,18 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState('1');
 
+  const avatarValue = Form.useWatch('avatar', form);
+
   useEffect(() => {
     if (visible && initialData) {
       form.setFieldsValue({
         ...initialData,
         hireDate: initialData.hireDate ? dayjs(initialData.hireDate) : undefined,
-        bankName: initialData.bankAccount?.bankName,
-        accountNumber: initialData.bankAccount?.accountNumber,
-        accountName: initialData.bankAccount?.accountName,
+        status: initialData.isActive ? 'active' : 'inactive',
+        avatar: initialData.avatarUrl,
+        bankName: initialData.bankName,
+        accountNumber: initialData.bankAccountNumber,
+        accountName: initialData.bankAccountName,
       });
     } else if (visible) {
       form.resetFields();
@@ -37,22 +41,19 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
       
       const payload = {
         name: values.name,
-        email: values.email,
+        // Only include email and password if we are creating new staff
+        ...(!initialData && { email: values.email, password: 'Password@123' }),
         phone: values.phone,
         address: values.address,
         idCardNumber: values.idCardNumber,
-        avatar: values.avatar,
-        role: values.role,
+        avatarUrl: values.avatar,
         salary: values.salary,
         salaryType: values.salaryType,
         hireDate: values.hireDate?.format('YYYY-MM-DD'),
-        status: values.status,
         notes: values.notes,
-        bankAccount: {
-          bankName: values.bankName,
-          accountNumber: values.accountNumber,
-          accountName: values.accountName,
-        }
+        bankName: values.bankName,
+        bankAccountNumber: values.accountNumber,
+        bankAccountName: values.accountName,
       };
       
       await onSubmit(payload);
@@ -62,9 +63,7 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
   };
 
   const getAvatarUrl = () => {
-    const avatar = form.getFieldValue('avatar');
-    if (avatar) return avatar;
-    return undefined;
+    return avatarValue;
   };
 
   return (
@@ -76,7 +75,7 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
       confirmLoading={loading}
       width={700}
       okText={initialData ? 'Update Staff' : 'Add Staff'}
-      destroyOnHidden
+      destroyOnClose
     >
       <Form
         form={form}
@@ -88,6 +87,7 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
           {
             key: '1',
             label: 'Personal Info',
+            forceRender: true,
             children: (
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-4">
                 <div className="col-span-2 flex items-center gap-4 mb-2">
@@ -146,6 +146,7 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
           {
             key: '2',
             label: 'Employment',
+            forceRender: true,
             children: (
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-4">
                 <Form.Item 
@@ -212,6 +213,7 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
           {
             key: '3',
             label: 'Bank Account',
+            forceRender: true,
             children: (
               <div className="grid grid-cols-1 gap-y-4 pt-4">
                 <Form.Item 

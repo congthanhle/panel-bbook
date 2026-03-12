@@ -131,7 +131,7 @@ export const StaffShiftView = () => {
                   selectedShift.assignedStaff.map(s => (
                     <div key={s.id} className="flex items-center gap-3.5 p-3 rounded-xl bg-white border border-slate-100 shadow-sm hover:shadow hover:border-slate-200 transition-all duration-300 group cursor-default">
                       <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden shadow-inner ring-2 ring-white group-hover:ring-indigo-50 transition-all">
-                        <img src={s.avatar} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                        <img src={s.avatarUrl} alt={s.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       </div>
                       <div className="flex flex-col">
                         <span className="font-semibold text-slate-800 text-sm tracking-tight">{s.name}</span>

@@ -4,19 +4,14 @@ import { Sidebar } from './Sidebar.jsx';
 import { Header } from './Header.jsx';
 import { useUiStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-
 const { Content } = Layout;
 
 export const AppLayout = () => {
   const { sidebarCollapsed } = useUiStore();
-  const { restoreSession, isAuthenticated, token } = useAuthStore();
-  const navigate = useNavigate();
+  const { isAuthenticated, token } = useAuthStore();
 
-  useEffect(() => {
-    restoreSession(navigate);
-  }, [restoreSession, navigate]);
+  // ProtectedRoute handles the session restoration logic at the top level
+  // So we don't need a redundant useEffect here.
 
   // Optionally block rendering the layout shell entirely until session is verified
   // if a token exists but user object is not yet loaded.

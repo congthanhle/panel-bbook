@@ -106,7 +106,7 @@ export const CreateShiftModal = ({ visible, onClose, onSubmit, initialData, load
   const staffOptions = useMemo(() => staffList.map(staff => ({
     label: (
       <div className="flex items-center gap-2">
-         <Avatar size="small" src={staff.avatar} icon={<UserOutlined />} />
+         <Avatar size="small" src={staff.avatarUrl} icon={<UserOutlined />} />
          <span>{staff.name}</span>
       </div>
     ),

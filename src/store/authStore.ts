@@ -62,9 +62,14 @@ export const useAuthStore = create<AuthStoreState>()(
       },
 
       restoreSession: async (navigate) => {
-        const { token } = get();
+        const { token, user, isAuthenticated } = get();
         if (!token) {
           navigate('/login', { replace: true });
+          return;
+        }
+
+        // If already authenticated and user data exists, skip re-fetching
+        if (isAuthenticated && user) {
           return;
         }
 

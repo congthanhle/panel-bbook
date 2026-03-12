@@ -21,18 +21,16 @@ const mockStaff: Staff[] = [
     email: 'staff@courtos.vn',
     phone: '+1234567890',
     role: 'staff',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John',
     salary: 1500,
     salaryType: 'monthly',
     hireDate: '2025-01-15',
     address: '123 Main St, Ho Chi Minh City',
     idCardNumber: '012345678912',
-    bankAccount: {
-      bankName: 'Vietcombank',
-      accountNumber: '1012345678',
-      accountName: 'JOHN DOE'
-    },
-    status: 'active',
+    bankName: 'Vietcombank',
+    bankAccountNumber: '1012345678',
+    bankAccountName: 'JOHN DOE',
+    isActive: true,
     notes: 'Excellent staff member',
   },
   {
@@ -42,14 +40,16 @@ const mockStaff: Staff[] = [
     email: 'jane@courtos.vn',
     phone: '+1234567891',
     role: 'staff',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane',
     salary: 1200,
     salaryType: 'monthly',
     hireDate: '2025-02-01',
     address: '456 Side St',
     idCardNumber: '9876543210',
-    bankAccount: { bankName: 'TCB', accountNumber: '0', accountName: 'JANE' },
-    status: 'active',
+    bankName: 'TCB',
+    bankAccountNumber: '0',
+    bankAccountName: 'JANE',
+    isActive: true,
   }
 ];
 

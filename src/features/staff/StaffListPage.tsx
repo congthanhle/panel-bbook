@@ -31,7 +31,7 @@ const StaffListPage = () => {
         staff.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         staff.phone?.includes(searchTerm);
       const matchRole = roleFilter === 'all' || staff.role === roleFilter;
-      const matchStatus = statusFilter === 'all' || staff.status === statusFilter;
+      const matchStatus = statusFilter === 'all' || (statusFilter === 'active' ? staff.isActive : !staff.isActive);
       return matchSearch && matchRole && matchStatus;
     });
   }, [staffList, searchTerm, roleFilter, statusFilter]);
@@ -113,7 +113,7 @@ const StaffListPage = () => {
       key: 'name',
       render: (_: any, record: Staff) => (
         <div className="flex items-center gap-3">
-          <Avatar src={record.avatar} icon={<UserOutlined />} />
+          <Avatar src={record.avatarUrl} icon={<UserOutlined />} />
           <div className="flex flex-col">
             <span className="font-semibold text-slate-800">{record.name}</span>
             <span className="text-xs text-slate-500">{record.email}</span>
@@ -134,9 +134,8 @@ const StaffListPage = () => {
     },
     {
       title: 'Status',
-      dataIndex: 'status',
       key: 'status',
-      render: (status: string) => <Tag color={status === 'active' ? 'success' : 'default'}>{status?.toUpperCase()}</Tag>,
+      render: (_: any, record: Staff) => <Tag color={record.isActive ? 'success' : 'default'}>{record.isActive ? 'ACTIVE' : 'INACTIVE'}</Tag>,
     },
     {
       title: 'Hire Date',
@@ -242,6 +241,7 @@ const StaffListPage = () => {
       </Card>
 
       <StaffFormModal
+        key={selectedStaff?.id || 'new'}
         visible={isFormModalVisible}
         onClose={() => setIsFormModalVisible(false)}
         onSubmit={handleFormSubmit}

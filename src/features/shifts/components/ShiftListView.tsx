@@ -70,7 +70,7 @@ export const ShiftListView = ({ shifts, loading, onEdit, onDelete, onView }: Shi
         <Avatar.Group maxCount={3} maxStyle={{ color: '#4f46e5', backgroundColor: '#e0e7ff', border: '2px solid white', fontWeight: 'bold' }}>
           {record.assignedStaff.map(staff => (
              <Tooltip key={staff.id} title={staff.name} placement="top">
-               <Avatar src={staff.avatar} icon={<UserOutlined />} className="ring-2 ring-white shadow-sm hover:scale-110 hover:z-10 transition-transform duration-300 relative cursor-pointer" />
+               <Avatar src={staff.avatarUrl} icon={<UserOutlined />} className="ring-2 ring-white shadow-sm hover:scale-110 hover:z-10 transition-transform duration-300 relative cursor-pointer" />
              </Tooltip>
           ))}
           {record.assignedStaff.length === 0 && <span className="text-slate-400 text-sm font-medium italic border border-dashed border-slate-200 px-2 py-0.5 rounded-full">Unassigned</span>}
