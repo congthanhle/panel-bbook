@@ -11,7 +11,7 @@ import { Shift } from '@/types/shift.types';
 import dayjs, { Dayjs } from 'dayjs';
 
 const ShiftsPage = () => {
-  const { shifts, isLoading, fetchShifts, createShift, updateShift, deleteShift } = useShiftStore();
+  const { shifts, isLoading, fetchShifts, createShift, createBulkShift, updateShift, deleteShift } = useShiftStore();
   
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
   const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
@@ -63,8 +63,13 @@ const ShiftsPage = () => {
           setIsDrawerVisible(false);
         }
       } else {
-        await createShift(values);
-        message.success('Shift created successfully');
+        if (values.startDate) {
+          await createBulkShift(values);
+          message.success('Multiple shifts created successfully');
+        } else {
+          await createShift(values);
+          message.success('Shift created successfully');
+        }
       }
       setIsModalVisible(false);
     } catch (error) {

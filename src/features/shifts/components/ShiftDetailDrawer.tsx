@@ -82,6 +82,12 @@ export const ShiftDetailDrawer = ({ visible, onClose, shift, loading }: ShiftDet
     return staffList.filter(s => !shift.assignedStaff.find(as => as.id === s.id));
   }, [staffList, shift]);
 
+  const isFuture = useMemo(() => {
+    if (!shift) return true;
+    const shiftStart = dayjs(`${shift.date} ${shift.startTime}`, 'YYYY-MM-DD HH:mm');
+    return dayjs().isBefore(shiftStart);
+  }, [shift]);
+
 
   const staffColumns = [
     {
@@ -125,7 +131,7 @@ export const ShiftDetailDrawer = ({ visible, onClose, shift, loading }: ShiftDet
         onClose={onClose}
         open={visible}
         extra={
-          shift?.status !== 'completed' && (
+          shift?.status !== 'completed' && !isFuture && (
             <Button 
                type="text" 
                className="text-green-600 font-medium bg-green-50 border-green-200 hover:bg-green-100"

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { Shift } from '@/types/shift.types';
+import { Shift, BulkCreateShiftDto } from '@/types/shift.types';
 import axios from '@/lib/axios';
+import { shiftsApi } from '@/features/shifts/api';
 
 interface ShiftState {
   shifts: Shift[];
@@ -10,6 +11,7 @@ interface ShiftState {
   fetchShifts: (month?: string) => Promise<void>;
   fetchMyShifts: () => Promise<void>;
   createShift: (shiftData: Omit<Shift, 'id' | 'status' | 'assignedStaff'> & { staffIds: string[] }) => Promise<void>;
+  createBulkShift: (bulkData: BulkCreateShiftDto) => Promise<void>;
   updateShift: (id: string, shiftData: Partial<Shift> & { staffIds?: string[] }) => Promise<void>;
   deleteShift: (id: string) => Promise<void>;
   assignStaffToShift: (shiftId: string, staffId: string) => Promise<void>;
@@ -28,7 +30,13 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
     try {
       const query = month ? `?month=${month}` : '';
       const response = await axios.get(`/shifts${query}`);
-      set({ shifts: response.data, isLoading: false });
+      const shifts = response.data.map((shift: any) => ({
+        ...shift,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        assignedStaff: shift.shift_assignments?.map((a: any) => a.users) || []
+      }));
+      set({ shifts, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
     }
@@ -38,7 +46,13 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.get('/shifts/my');
-      set({ myShifts: response.data, isLoading: false });
+      const myShifts = response.data.map((shift: any) => ({
+        ...shift,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        assignedStaff: shift.shift_assignments?.map((a: any) => a.users) || []
+      }));
+      set({ myShifts, isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
     }
@@ -48,7 +62,30 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.post('/shifts', shiftData);
-      set({ shifts: [...get().shifts, response.data], isLoading: false });
+      const newShift = {
+        ...response.data,
+        startTime: response.data.start_time,
+        endTime: response.data.end_time,
+        assignedStaff: response.data.shift_assignments?.map((a: any) => a.users) || []
+      };
+      set({ shifts: [...get().shifts, newShift], isLoading: false });
+    } catch (error: any) {
+      set({ error: error.message, isLoading: false });
+      throw error;
+    }
+  },
+
+  createBulkShift: async (bulkData) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await shiftsApi.createBulk(bulkData);
+      const newShifts = response.map((shift: any) => ({
+        ...shift,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        assignedStaff: shift.shift_assignments?.map((a: any) => a.users) || []
+      }));
+      set({ shifts: [...get().shifts, ...newShifts], isLoading: false });
     } catch (error: any) {
       set({ error: error.message, isLoading: false });
       throw error;
@@ -59,8 +96,14 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await axios.patch(`/shifts/${id}`, shiftData);
+      const updatedShift = {
+        ...response.data,
+        startTime: response.data.start_time,
+        endTime: response.data.end_time,
+        assignedStaff: response.data.shift_assignments?.map((a: any) => a.users) || []
+      };
       set({ 
-        shifts: get().shifts.map(s => s.id === id ? { ...s, ...response.data } : s),
+        shifts: get().shifts.map(s => s.id === id ? { ...s, ...updatedShift } : s),
         isLoading: false 
       });
     } catch (error: any) {
@@ -83,9 +126,11 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   assignStaffToShift: async (shiftId, staffId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`/shifts/${shiftId}/assign`, { staffId });
+      const response = await axios.post(`/shifts/${shiftId}/assign`, { staffIds: [staffId] });
+      // response.data is an array of assignments
+      const assignedStaff = response.data.map((a: any) => a.users) || [];
       set({
-        shifts: get().shifts.map(s => s.id === shiftId ? response.data : s),
+        shifts: get().shifts.map(s => s.id === shiftId ? { ...s, assignedStaff } : s),
         isLoading: false
       });
     } catch (error: any) {
@@ -97,9 +142,11 @@ export const useShiftStore = create<ShiftState>((set, get) => ({
   removeStaffFromShift: async (shiftId, staffId) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await axios.post(`/shifts/${shiftId}/remove`, { staffId });
+      await axios.delete(`/shifts/${shiftId}/staff/${staffId}`);
       set({
-        shifts: get().shifts.map(s => s.id === shiftId ? response.data : s),
+        shifts: get().shifts.map(s => s.id === shiftId 
+          ? { ...s, assignedStaff: s.assignedStaff.filter((staff: any) => staff.id !== staffId) } 
+          : s),
         isLoading: false
       });
     } catch (error: any) {

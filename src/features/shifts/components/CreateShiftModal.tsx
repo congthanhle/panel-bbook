@@ -39,43 +39,56 @@ export const CreateShiftModal = ({ visible, onClose, onSubmit, initialData, load
       });
     } else if (visible) {
       form.resetFields();
+      form.setFieldsValue({
+        dateRange: [dayjs(), dayjs()],
+      });
     }
     setConflictWarning(null);
   }, [visible, initialData, form]);
 
   // Conflict Detection Logic
   const handleValuesChange = (_: any, allValues: any) => {
-    if (!allValues.date || !allValues.timeRange || !allValues.staffIds || allValues.staffIds.length === 0) {
+    const isEdit = !!initialData;
+    const hasDates = isEdit ? !!allValues.date : (allValues.dateRange && allValues.dateRange.length === 2);
+    
+    if (!hasDates || !allValues.timeRange || !allValues.staffIds || allValues.staffIds.length === 0) {
       setConflictWarning(null);
       return;
     }
 
-    const selectedDateStr = allValues.date.format('YYYY-MM-DD');
     const selStart = allValues.timeRange[0].format('HH:mm');
     const selEnd = allValues.timeRange[1].format('HH:mm');
-
     const conflicts: string[] = [];
 
-    // Check all existing shifts on the same day (excluding the one being edited)
-    const dayShifts = existingShifts.filter(s => s.date === selectedDateStr && s.id !== initialData?.id);
-    
-    allValues.staffIds.forEach((staffId: string) => {
-      const isConflicting = dayShifts.some(shift => {
-        // Does shift contain this staff member?
-        const hasStaff = shift.assignedStaff.some(s => s.id === staffId);
-        if (!hasStaff) return false;
-
-        // Does the time overlap?
-        // overlap condition: max(start1, start2) < min(end1, end2)
-        const overlapStart = selStart > shift.startTime ? selStart : shift.startTime;
-        const overlapEnd = selEnd < shift.endTime ? selEnd : shift.endTime;
-        return overlapStart < overlapEnd;
-      });
-
-      if (isConflicting) {
-        const staff = staffList.find(s => s.id === staffId);
-        if (staff) conflicts.push(staff.name);
+    const datesToCheck: string[] = [];
+    if (isEdit) {
+      datesToCheck.push(allValues.date.format('YYYY-MM-DD'));
+    } else {
+      let current = dayjs(allValues.dateRange[0]);
+      const end = dayjs(allValues.dateRange[1]);
+      while (current.isSameOrBefore(end, 'day')) {
+        datesToCheck.push(current.format('YYYY-MM-DD'));
+        current = current.add(1, 'day');
       }
+    }
+
+    datesToCheck.forEach((selectedDateStr: string) => {
+      const dayShifts = existingShifts.filter(s => s.date === selectedDateStr && s.id !== initialData?.id);
+      
+      allValues.staffIds.forEach((staffId: string) => {
+        const isConflicting = dayShifts.some(shift => {
+          const hasStaff = shift.assignedStaff.some(s => s.id === staffId);
+          if (!hasStaff) return false;
+          const overlapStart = selStart > shift.startTime ? selStart : shift.startTime;
+          const overlapEnd = selEnd < shift.endTime ? selEnd : shift.endTime;
+          return overlapStart < overlapEnd;
+        });
+
+        if (isConflicting) {
+          const staff = staffList.find(s => s.id === staffId);
+          if (staff && !conflicts.includes(staff.name)) conflicts.push(staff.name);
+        }
+      });
     });
 
     if (conflicts.length > 0) {
@@ -88,15 +101,28 @@ export const CreateShiftModal = ({ visible, onClose, onSubmit, initialData, load
   const handleOk = async () => {
     try {
       const values = await form.validateFields();
-      const payload = {
-        name: values.name,
-        date: values.date.format('YYYY-MM-DD'),
-        startTime: values.timeRange[0].format('HH:mm'),
-        endTime: values.timeRange[1].format('HH:mm'),
-        notes: values.notes,
-        staffIds: values.staffIds || [],
-      };
-      await onSubmit(payload);
+      if (initialData) {
+        const payload = {
+          name: values.name,
+          date: values.date.format('YYYY-MM-DD'),
+          startTime: values.timeRange[0].format('HH:mm'),
+          endTime: values.timeRange[1].format('HH:mm'),
+          notes: values.notes,
+          staffIds: values.staffIds || [],
+        };
+        await onSubmit(payload);
+      } else {
+        const payload = {
+          name: values.name,
+          startDate: values.dateRange[0].format('YYYY-MM-DD'),
+          endDate: values.dateRange[1].format('YYYY-MM-DD'),
+          startTime: values.timeRange[0].format('HH:mm'),
+          endTime: values.timeRange[1].format('HH:mm'),
+          notes: values.notes,
+          staffIds: values.staffIds || [],
+        };
+        await onSubmit(payload);
+      }
     } catch (error) {
       // form validation error
     }
@@ -140,13 +166,23 @@ export const CreateShiftModal = ({ visible, onClose, onSubmit, initialData, load
         </Form.Item>
 
         <div className="grid grid-cols-2 gap-4">
-          <Form.Item 
-            label="Date" 
-            name="date"
-            rules={[{ required: true, message: 'Date is required' }]}
-          >
-            <DatePicker className="w-full" />
-          </Form.Item>
+          {initialData ? (
+            <Form.Item 
+              label="Date" 
+              name="date"
+              rules={[{ required: true, message: 'Date is required' }]}
+            >
+              <DatePicker className="w-full" />
+            </Form.Item>
+          ) : (
+            <Form.Item 
+              label="Date Range (From - To)" 
+              name="dateRange"
+              rules={[{ required: true, message: 'Date range is required' }]}
+            >
+              <DatePicker.RangePicker className="w-full" />
+            </Form.Item>
+          )}
 
           <Form.Item 
             label="Time (Start - End)" 

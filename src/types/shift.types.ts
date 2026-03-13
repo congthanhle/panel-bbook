@@ -19,3 +19,35 @@ export interface ShiftAssignment {
   checkedIn?: string; // ISO String
   checkedOut?: string; // ISO String
 }
+
+export interface ShiftQueryDto {
+  date?: string;
+  month?: string;
+  staffId?: string;
+  status?: ShiftStatus;
+  page?: number;
+  limit?: number;
+}
+
+export type ShiftCalendarData = Record<string, Shift[]>;
+
+export interface CreateShiftDto {
+  name: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+  staffIds?: string[];
+}
+
+export interface UpdateShiftDto extends Partial<CreateShiftDto> {}
+
+export interface BulkCreateShiftDto {
+  name: string;
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+  staffIds?: string[];
+}
