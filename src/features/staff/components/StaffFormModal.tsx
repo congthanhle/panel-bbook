@@ -45,6 +45,8 @@ export const StaffFormModal = ({ visible, onClose, onSubmit, initialData, loadin
         ...(!initialData && { email: values.email, password: 'Password@123' }),
         phone: values.phone,
         address: values.address,
+        role: values.role,
+        status: values.status,
         idCardNumber: values.idCardNumber,
         avatarUrl: values.avatar,
         salary: values.salary,
