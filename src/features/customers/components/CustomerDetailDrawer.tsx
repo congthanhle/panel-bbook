@@ -97,7 +97,7 @@ export const CustomerDetailDrawer = ({ open, onClose, customer, onEdit }: Props)
           <Tabs.TabPane tab="Details & Notes" key="details">
             <Descriptions column={2} bordered size="small" className="mb-6">
               <Descriptions.Item label="Date of Birth">
-                {customer.dob ? dayjs(customer.dob).format('MMM D, YYYY') : '-'}
+                {customer.dateOfBirth ? dayjs(customer.dateOfBirth).format('MMM D, YYYY') : '-'}
               </Descriptions.Item>
               <Descriptions.Item label="Gender" className="capitalize">
                 {customer.gender || '-'}

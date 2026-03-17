@@ -1,9 +1,8 @@
 export type ProductCategory = 
-  | 'equipment_rental' 
-  | 'beverage' 
-  | 'snack' 
-  | 'shuttle_cock' 
-  | 'coaching' 
+  | 'equipment' 
+  | 'refreshment' 
+  | 'merchandise' 
+  | 'rental' 
   | 'other';
 
 export interface Product {
@@ -11,10 +10,33 @@ export interface Product {
   name: string;
   category: ProductCategory;
   price: number;
-  unit: string;
+  costPrice?: number;
+  sku?: string;
   stock?: number;
   isService: boolean;
   imageUrl?: string;
   isActive: boolean;
   description?: string;
 }
+
+export interface ProductQueryDto {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: ProductCategory;
+  isActive?: boolean;
+  isService?: boolean;
+}
+
+export interface CreateProductDto {
+  name: string;
+  category: ProductCategory;
+  price: number;
+  costPrice?: number;
+  sku?: string;
+  stockQty?: number;
+  imageUrl?: string;
+  description?: string;
+}
+
+export type UpdateProductDto = Partial<CreateProductDto>;

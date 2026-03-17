@@ -25,8 +25,7 @@ export const ProductFormModal = ({ open, onClose, product }: Props) => {
           isActive: true,
           isService: false,
           category: 'other',
-          price: 0,
-          unit: 'item'
+          price: 0
         });
       }
     }
@@ -90,36 +89,40 @@ export const ProductFormModal = ({ open, onClose, product }: Props) => {
             rules={[{ required: true, message: 'Category is required' }]}
           >
             <Select>
-              <Select.Option value="equipment_rental">Equipment Rental</Select.Option>
-              <Select.Option value="beverage">Beverage</Select.Option>
-              <Select.Option value="snack">Snack</Select.Option>
-              <Select.Option value="shuttle_cock">Shuttlecock</Select.Option>
-              <Select.Option value="coaching">Coaching</Select.Option>
+              <Select.Option value="equipment">Equipment</Select.Option>
+              <Select.Option value="refreshment">Refreshment</Select.Option>
+              <Select.Option value="merchandise">Merchandise</Select.Option>
+              <Select.Option value="rental">Rental</Select.Option>
               <Select.Option value="other">Other</Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="price"
-            label="Price ($)"
+            label="Selling Price ($)"
             rules={[{ required: true, message: 'Price is required' }]}
           >
             <InputNumber className="w-full" min={0} step={0.5} prefix="$" />
           </Form.Item>
 
           <Form.Item
-            name="unit"
-            label="Unit Type"
-            rules={[{ required: true, message: 'Unit is required' }]}
+            name="costPrice"
+            label="Cost Price ($)"
           >
-            <Input placeholder="tube, bottle, hour, session..." />
+            <InputNumber className="w-full" min={0} step={0.5} prefix="$" />
+          </Form.Item>
+
+          <Form.Item
+            name="sku"
+            label="SKU / Barcode"
+          >
+            <Input placeholder="SHT-YNX-01..." />
           </Form.Item>
 
           {!isServiceValue && (
             <Form.Item
               name="stock"
               label="Stock Inventory"
-              rules={[{ required: true, message: 'Stock is required for products' }]}
             >
               <InputNumber className="w-full" min={0} />
             </Form.Item>

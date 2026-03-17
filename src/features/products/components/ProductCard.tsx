@@ -1,6 +1,7 @@
 import { Card, Tag, Switch, Typography, Button } from 'antd';
 import { EditOutlined, DeleteOutlined, AlertOutlined, ShoppingCartOutlined, ToolOutlined } from '@ant-design/icons';
 import { Product } from '@/types/product.types';
+import { StockAdjustmentPopover } from './StockAdjustmentPopover';
 
 interface Props {
   product: Product;
@@ -10,20 +11,18 @@ interface Props {
 }
 
 const categoryColors: Record<string, string> = {
-  equipment_rental: 'blue',
-  beverage: 'cyan',
-  snack: 'orange',
-  shuttle_cock: 'green',
-  coaching: 'purple',
+  equipment: 'blue',
+  refreshment: 'cyan',
+  merchandise: 'orange',
+  rental: 'green',
   other: 'default',
 };
 
 const categoryLabels: Record<string, string> = {
-  equipment_rental: 'Rental',
-  beverage: 'Beverage',
-  snack: 'Snack',
-  shuttle_cock: 'Shuttlecock',
-  coaching: 'Coaching',
+  equipment: 'Equipment',
+  refreshment: 'Refreshment',
+  merchandise: 'Merchandise',
+  rental: 'Rental',
   other: 'Other',
 };
 
@@ -64,8 +63,14 @@ export const ProductCard = ({ product, onEdit, onDelete, onToggleActive }: Props
 
           {isLowStock && (
             <div className="absolute bottom-3 left-3 right-3">
-              <div className="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-2 shadow-sm border border-amber-200">
-                <AlertOutlined /> Low Stock: Only {product.stock} left
+              <div className="bg-amber-100 text-amber-800 px-3 py-1.5 rounded-md text-xs font-semibold flex items-center justify-between shadow-sm border border-amber-200">
+                <div className="flex items-center gap-2">
+                  <AlertOutlined /> Low Stock: Only {product.stock} left
+                </div>
+                <div className="flex items-center -mr-1">
+                  <StockAdjustmentPopover productId={product.id} type="subtract" currentStock={product.stock || 0} />
+                  <StockAdjustmentPopover productId={product.id} type="add" currentStock={product.stock || 0} />
+                </div>
               </div>
             </div>
           )}
@@ -89,7 +94,7 @@ export const ProductCard = ({ product, onEdit, onDelete, onToggleActive }: Props
           {product.name}
         </Typography.Title>
         <div className="text-xl font-bold text-indigo-600 mb-2">
-          ${product.price.toFixed(2)} <span className="text-sm font-normal text-slate-400">/ {product.unit}</span>
+          ${product.price.toFixed(2)}
         </div>
         
         {product.description && (
@@ -99,8 +104,14 @@ export const ProductCard = ({ product, onEdit, onDelete, onToggleActive }: Props
         )}
         
         {!product.isService && product.stock !== undefined && !isLowStock && (
-          <div className="text-sm text-slate-500 mt-3 pt-3 border-t border-slate-100">
-            Stock: <span className="font-semibold text-slate-700">{product.stock}</span> units
+          <div className="text-sm text-slate-500 mt-3 pt-3 border-t border-slate-100 flex items-center justify-between group">
+            <div>
+              Stock: <span className="font-semibold text-slate-700">{product.stock}</span> units
+            </div>
+            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity -mr-2">
+              <StockAdjustmentPopover productId={product.id} type="subtract" currentStock={product.stock || 0} />
+              <StockAdjustmentPopover productId={product.id} type="add" currentStock={product.stock || 0} />
+            </div>
           </div>
         )}
       </div>

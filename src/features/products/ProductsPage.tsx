@@ -17,28 +17,27 @@ import { useProductStore } from '@/store/productStore';
 import { Product, ProductCategory } from '@/types/product.types';
 import { ProductCard } from './components/ProductCard';
 import { ProductFormModal } from './components/ProductFormModal';
+import { StockAdjustmentPopover } from './components/StockAdjustmentPopover';
 
 const categoryOptions = [
   { label: 'All', value: 'all' },
-  { label: 'Equipment Rental', value: 'equipment_rental' },
-  { label: 'Beverage', value: 'beverage' },
-  { label: 'Snack', value: 'snack' },
-  { label: 'Shuttlecock', value: 'shuttle_cock' },
-  { label: 'Coaching', value: 'coaching' },
+  { label: 'Equipment', value: 'equipment' },
+  { label: 'Refreshment', value: 'refreshment' },
+  { label: 'Merchandise', value: 'merchandise' },
+  { label: 'Rental', value: 'rental' },
   { label: 'Other', value: 'other' },
 ];
 
 const categoryLabels: Record<string, string> = {
-  equipment_rental: 'Rental',
-  beverage: 'Beverage',
-  snack: 'Snack',
-  shuttle_cock: 'Shuttlecock',
-  coaching: 'Coaching',
+  equipment: 'Equipment',
+  refreshment: 'Refreshment',
+  merchandise: 'Merchandise',
+  rental: 'Rental',
   other: 'Other',
 };
 
 const ProductsPage = () => {
-  const { products, isLoading, fetchProducts, deleteProduct, updateProduct } = useProductStore();
+  const { products, lowStockProducts, isLoading, fetchProducts, fetchLowStock, deleteProduct, updateProduct } = useProductStore();
   
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [activeCategory, setActiveCategory] = useState<ProductCategory | 'all'>('all');
@@ -49,7 +48,8 @@ const ProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+    fetchLowStock();
+  }, [fetchProducts, fetchLowStock]);
 
   const handleEdit = (product: Product) => {
     setEditingProduct(product);
@@ -66,7 +66,7 @@ const ProductsPage = () => {
     updateProduct(id, { isActive });
   };
 
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = (products || []).filter(p => {
     const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
     const matchesSearch = p.name.toLowerCase().includes(searchText.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -95,16 +95,29 @@ const ProductsPage = () => {
       ),
     },
     {
+      title: 'SKU / Barcode',
+      dataIndex: 'sku',
+      key: 'sku',
+      render: (sku: string) => sku || <span className="text-slate-400">N/A</span>,
+    },
+    {
       title: 'Category',
       dataIndex: 'category',
       key: 'category',
       render: (cat: string) => <Tag>{categoryLabels[cat] || cat}</Tag>,
     },
     {
+      title: 'Cost',
+      dataIndex: 'costPrice',
+      key: 'costPrice',
+      render: (val: number) => `$${(val || 0).toFixed(2)}`,
+      sorter: (a, b) => (a.costPrice || 0) - (b.costPrice || 0),
+    },
+    {
       title: 'Price',
       dataIndex: 'price',
       key: 'price',
-      render: (val: number, record) => `$${val.toFixed(2)} / ${record.unit}`,
+      render: (val: number) => `$${val.toFixed(2)}`,
       sorter: (a, b) => a.price - b.price,
     },
     {
@@ -113,8 +126,20 @@ const ProductsPage = () => {
       render: (_, record) => {
         if (record.isService) return <span className="text-slate-400">-</span>;
         const stock = record.stock || 0;
-        if (stock < 5) return <span className="text-amber-600 font-semibold">{stock} (Low)</span>;
-        return <span>{stock}</span>;
+        const isLow = stock < 5;
+        return (
+          <div className="flex items-center gap-2">
+            {isLow ? (
+              <span className="text-amber-600 font-semibold">{stock} (Low)</span>
+            ) : (
+              <span>{stock}</span>
+            )}
+            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+              <StockAdjustmentPopover productId={record.id} type="subtract" currentStock={stock} />
+              <StockAdjustmentPopover productId={record.id} type="add" currentStock={stock} />
+            </div>
+          </div>
+        );
       },
       sorter: (a, b) => (a.stock || 0) - (b.stock || 0),
     },
@@ -138,16 +163,24 @@ const ProductsPage = () => {
       title="Products & Services"
       subtitle="Manage your inventory, rentals, and coaching services"
       action={
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />} 
-          onClick={() => {
-            setEditingProduct(undefined);
-            setIsFormOpen(true);
-          }}
-        >
-          Add Item
-        </Button>
+        <div className="flex items-center gap-4">
+          {lowStockProducts.length > 0 && (
+            <Tag color="warning" className="text-sm px-3 py-1 flex items-center gap-2 border-amber-200 bg-amber-50 text-amber-700">
+              <PackageSearch size={16} />
+              <span>{lowStockProducts.length} items low on stock</span>
+            </Tag>
+          )}
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />} 
+            onClick={() => {
+              setEditingProduct(undefined);
+              setIsFormOpen(true);
+            }}
+          >
+            Add Item
+          </Button>
+        </div>
       }
     >
       <div className="space-y-6">

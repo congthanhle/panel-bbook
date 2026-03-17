@@ -8,8 +8,9 @@ import {
   DeleteOutlined,
   UserOutlined
 } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { useDebounce } from 'use-debounce';
 
 import { Users } from 'lucide-react';
 
@@ -21,21 +22,41 @@ import { Customer, MembershipTier } from '@/types/customer.types';
 import { MembershipTierBadge } from './components/MembershipTierBadge';
 import { CustomerFormModal } from './components/CustomerFormModal';
 import { CustomerDetailDrawer } from './components/CustomerDetailDrawer';
+import { customersApi } from './api';
 
 const CustomersPage = () => {
-  const { customers, isLoading, fetchCustomers, deleteCustomer } = useCustomerStore();
+  const { 
+    customers, 
+    pagination,
+    isLoading, 
+    fetchCustomers, 
+    fetchStats,
+    setFilters,
+    deleteCustomer 
+  } = useCustomerStore();
   
   const [searchText, setSearchText] = useState('');
+  const [debouncedSearch] = useDebounce(searchText, 300);
+  
   const [activeTab, setActiveTab] = useState<MembershipTier | 'all'>('all');
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | undefined>();
   const [viewingCustomer, setViewingCustomer] = useState<Customer | undefined>();
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
+    fetchStats();
     fetchCustomers();
-  }, [fetchCustomers]);
+  }, [fetchStats, fetchCustomers]);
+
+  useEffect(() => {
+    setFilters({ 
+      search: debouncedSearch || undefined,
+      tier: activeTab === 'all' ? undefined : activeTab,
+    });
+  }, [debouncedSearch, activeTab, setFilters]);
 
   const handleEdit = (customer: Customer) => {
     setEditingCustomer(customer);
@@ -53,16 +74,20 @@ const CustomersPage = () => {
     }
   };
 
-  const filteredCustomers = customers.filter(c => {
-    const matchesSearch = 
-      c.name.toLowerCase().includes(searchText.toLowerCase()) || 
-      c.phone.includes(searchText) ||
-      (c.email && c.email.toLowerCase().includes(searchText.toLowerCase()));
-    
-    const matchesTier = activeTab === 'all' || c.membershipTier === activeTab;
-    
-    return matchesSearch && matchesTier;
-  });
+  const handleTableChange = (newPagination: TablePaginationConfig) => {
+    fetchCustomers(newPagination.current);
+  };
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      await customersApi.exportCsv();
+    } catch (error) {
+      console.error('Failed to export CSV', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const columns: ColumnsType<Customer> = [
     {
@@ -138,7 +163,13 @@ const CustomersPage = () => {
       subtitle="Manage your customer relationships and memberships"
       action={
         <Space>
-          <Button icon={<DownloadOutlined />}>Export CSV</Button>
+          <Button 
+            icon={<DownloadOutlined />} 
+            onClick={handleExport}
+            loading={isExporting}
+          >
+            Export CSV
+          </Button>
           <Button 
             type="primary" 
             icon={<PlusOutlined />} 
@@ -179,9 +210,10 @@ const CustomersPage = () => {
 
           <Table
             columns={columns}
-            dataSource={filteredCustomers}
+            dataSource={customers}
             rowKey="id"
             loading={isLoading}
+            onChange={handleTableChange}
             locale={{
               emptyText: (
                 <EmptyState 
@@ -197,9 +229,10 @@ const CustomersPage = () => {
               )
             }}
             pagination={{
-              total: filteredCustomers.length,
-              pageSize: 10,
-              showSizeChanger: true,
+              current: pagination.page,
+              pageSize: pagination.limit,
+              total: pagination.total,
+              showSizeChanger: false, // Disabling size change temporarily since API doesn't support changing limit yet
               showTotal: (total) => `Total ${total} customers`
             }}
             scroll={{ x: 900 }}
@@ -210,6 +243,11 @@ const CustomersPage = () => {
           open={isFormOpen} 
           onClose={() => setIsFormOpen(false)} 
           customer={editingCustomer}
+          onOpenDetail={(customer) => {
+            setIsFormOpen(false);
+            setViewingCustomer(customer);
+            setIsDrawerOpen(true);
+          }}
         />
         
         <CustomerDetailDrawer 
