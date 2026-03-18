@@ -193,6 +193,13 @@ export const useProductStore = create<ProductState>((set, get) => ({
     try {
       await productsApi.delete(id);
       
+      // The API soft-deletes by setting is_active to false, so it might 
+      // still be returned by a refetch if we don't filter it out
+      set((state) => ({
+        products: state.products.filter(p => p.id !== id),
+        lowStockProducts: state.lowStockProducts.filter(p => p.id !== id)
+      }));
+
       const { pagination, products } = get();
       if (products.length === 1 && pagination.page > 1) {
         await get().fetchProducts(pagination.page - 1);

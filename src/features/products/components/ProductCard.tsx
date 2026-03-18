@@ -1,4 +1,4 @@
-import { Card, Tag, Switch, Typography, Button } from 'antd';
+import { Card, Tag, Switch, Typography, Button, Popconfirm } from 'antd';
 import { EditOutlined, DeleteOutlined, AlertOutlined, ShoppingCartOutlined, ToolOutlined } from '@ant-design/icons';
 import { Product } from '@/types/product.types';
 import { StockAdjustmentPopover } from './StockAdjustmentPopover';
@@ -86,7 +86,20 @@ export const ProductCard = ({ product, onEdit, onDelete, onToggleActive }: Props
           size="small"
         />,
         <Button key="edit" type="text" icon={<EditOutlined />} onClick={() => onEdit(product)} className="text-slate-500 hover:text-indigo-600" />,
-        <Button key="delete" type="text" danger icon={<DeleteOutlined />} onClick={() => onDelete(product.id)} />,
+        <Popconfirm
+          key="delete"
+          title="Delete Product"
+          description="Are you sure you want to delete this product?"
+          onConfirm={(e) => {
+            e?.stopPropagation();
+            onDelete(product.id);
+          }}
+          onCancel={(e) => e?.stopPropagation()}
+          okText="Yes"
+          cancelText="No"
+        >
+          <Button type="text" danger icon={<DeleteOutlined />} onClick={(e) => e.stopPropagation()} />
+        </Popconfirm>,
       ]}
     >
       <div className="p-4 flex-1 flex flex-col">

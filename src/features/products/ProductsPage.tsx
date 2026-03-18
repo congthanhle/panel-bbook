@@ -57,9 +57,7 @@ const ProductsPage = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      deleteProduct(id);
-    }
+    deleteProduct(id);
   };
 
   const handleToggleActive = (id: string, isActive: boolean) => {

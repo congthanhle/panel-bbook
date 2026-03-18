@@ -5,7 +5,6 @@ import {
   VenueSettingsDto, 
   OperatingHoursDto, 
   BookingRulesDto, 
-  Holiday, 
   HolidayDto, 
   NotificationSettingsDto 
 } from '@/types/settings.types';
