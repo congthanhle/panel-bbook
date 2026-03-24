@@ -1,5 +1,7 @@
-import { Form, Input, Button, Card, Switch, Table, Tag, Typography } from 'antd';
+import { useState } from 'react';
+import { Form, Input, Button, Card, Switch, Table, Tag, Typography, message } from 'antd';
 import { ShieldCheck, MonitorSmartphone, Smartphone } from 'lucide-react';
+import { settingsApi } from '../api';
 
 const { Title, Text } = Typography;
 
@@ -26,9 +28,19 @@ const sessionsData = [
 
 const AccountTab = () => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const handlePasswordChange = (values: any) => {
-    console.log('Password updated:', values);
+  const handlePasswordChange = async (values: any) => {
+    setLoading(true);
+    try {
+      await settingsApi.changePassword(values.currentPassword, values.newPassword);
+      message.success('Password updated successfully');
+      form.resetFields();
+    } catch (err: any) {
+      message.error(err.response?.data?.message || 'Failed to update password');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const columns = [
@@ -121,7 +133,7 @@ const AccountTab = () => {
             <Input.Password size="large" />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit">Update Password</Button>
+          <Button type="primary" htmlType="submit" loading={loading}>Update Password</Button>
         </Form>
       </Card>
 

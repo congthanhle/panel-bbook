@@ -1,18 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, Upload, Row, Col, Typography, TimePicker, message } from 'antd';
 import { UploadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { settingsApi } from '../api';
+import type { HolidayDto } from '@/types/settings.types';
 
 const { Title, Text } = Typography;
 
 const VenueInfoTab = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [initialHolidays, setInitialHolidays] = useState<HolidayDto[]>([]);
 
-  const handleFinish = async (_values: any) => {
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await settingsApi.getAll();
+        
+        form.setFieldsValue({
+          venueName: data.venue.venueName || '',
+          email: data.venue.email || '',
+          phone: data.venue.phone || '',
+          address: data.venue.address || '',
+          
+          weekdayOpen: data.operatingHours.weekdayOpen ? dayjs(data.operatingHours.weekdayOpen, 'HH:mm') : null,
+          weekdayClose: data.operatingHours.weekdayClose ? dayjs(data.operatingHours.weekdayClose, 'HH:mm') : null,
+          weekendOpen: data.operatingHours.weekendOpen ? dayjs(data.operatingHours.weekendOpen, 'HH:mm') : null,
+          weekendClose: data.operatingHours.weekendClose ? dayjs(data.operatingHours.weekendClose, 'HH:mm') : null,
+
+          holidays: data.holidays || [],
+        });
+        setInitialHolidays(data.holidays || []);
+      } catch (err) {
+        message.error('Failed to load venue settings');
+      }
+    };
+    loadData();
+  }, [form]);
+
+  const handleFinish = async (values: any) => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await settingsApi.updateVenue({
+        venueName: values.venueName,
+        email: values.email,
+        phone: values.phone,
+        address: values.address,
+        logoUrl: undefined,
+      });
+
+      await settingsApi.updateOperatingHours({
+        weekdayOpen: values.weekdayOpen ? values.weekdayOpen.format('HH:mm') : '08:00',
+        weekdayClose: values.weekdayClose ? values.weekdayClose.format('HH:mm') : '22:00',
+        weekendOpen: values.weekendOpen ? values.weekendOpen.format('HH:mm') : '08:00',
+        weekendClose: values.weekendClose ? values.weekendClose.format('HH:mm') : '22:00',
+      });
+
+      const currentHolidays: HolidayDto[] = values.holidays || [];
+      const currentDates = currentHolidays.map(h => h.date);
+      
+      const toRemove = initialHolidays.filter(h => !currentDates.includes(h.date));
+      for (const h of toRemove) {
+        await settingsApi.removeHoliday(h.date);
+      }
+      
+      for (const h of currentHolidays) {
+        const exists = initialHolidays.find(init => init.date === h.date);
+        if (!exists) {
+           await settingsApi.addHoliday(h);
+        } else if (exists.name !== h.name) {
+           await settingsApi.removeHoliday(h.date);
+           await settingsApi.addHoliday(h);
+        }
+      }
+      
+      setInitialHolidays(currentHolidays);
       message.success('Venue Information saved successfully');
     } catch {
       message.error('Failed to save venue info');
@@ -27,21 +89,11 @@ const VenueInfoTab = () => {
         form={form}
         layout="vertical"
         onFinish={handleFinish}
-        initialValues={{
-          name: 'CourtOS Arena',
-          email: 'hello@courtos.com',
-          phone: '+1 (555) 123-4567',
-          address: '123 Smash Avenue, Badminton City',
-          weekdayOpen: dayjs('08:00', 'HH:mm'),
-          weekdayClose: dayjs('22:00', 'HH:mm'),
-          weekendOpen: dayjs('07:00', 'HH:mm'),
-          weekendClose: dayjs('23:00', 'HH:mm'),
-        }}
       >
         <Card title="Basic Information" className="mb-6 shadow-sm drop-shadow-sm border-slate-200" bordered={false}>
           <Row gutter={24}>
             <Col xs={24} md={16}>
-              <Form.Item label="Venue Name" name="name" rules={[{ required: true }]}>
+              <Form.Item label="Venue Name" name="venueName" rules={[{ required: true }]}>
                 <Input placeholder="Enter venue name" size="large" />
               </Form.Item>
               <Row gutter={16}>
@@ -115,10 +167,9 @@ const VenueInfoTab = () => {
           title="Holiday & Closure Dates" 
           className="mb-6 shadow-sm border-slate-200" 
           bordered={false}
-          extra={<Button type="dashed" icon={<PlusOutlined />}>Add Holiday</Button>}
         >
           <Form.List name="holidays">
-            {(fields, { remove }) => (
+            {(fields, { add, remove }) => (
               <div className="space-y-3">
                 {fields.length === 0 && (
                   <div className="text-center py-6 text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
@@ -137,7 +188,7 @@ const VenueInfoTab = () => {
                     </Form.Item>
                     <Form.Item
                       {...restField}
-                      name={[name, 'reason']}
+                      name={[name, 'name']}
                       rules={[{ required: true, message: 'Missing reason' }]}
                       className="mb-0 flex-1"
                     >
@@ -146,6 +197,15 @@ const VenueInfoTab = () => {
                     <Button type="text" danger onClick={() => remove(name)} icon={<DeleteOutlined />} className="mt-1" />
                   </div>
                 ))}
+                <Button 
+                  type="dashed" 
+                  onClick={() => add()} 
+                  block 
+                  icon={<PlusOutlined />}
+                  className="mt-2"
+                >
+                  Add Holiday Date
+                </Button>
               </div>
             )}
           </Form.List>

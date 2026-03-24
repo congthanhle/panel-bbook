@@ -4,14 +4,21 @@ import {
   VenueSettingsDto, 
   OperatingHoursDto, 
   BookingRulesDto, 
-  Holiday, 
   HolidayDto, 
   NotificationSettingsDto 
 } from '@/types/settings.types';
 
 export const settingsApi = {
-  getAll: () =>
-    apiClient.get<AllSettings>("/settings"),
+  getAll: async () => {
+    const raw: any = await apiClient.get("/settings");
+    return {
+      venue: raw.venue_info || {},
+      operatingHours: raw.operating_hours || {},
+      bookingRules: raw.booking_rules || {},
+      holidays: raw.holidays || [],
+      notifications: raw.notifications || {},
+    } as AllSettings;
+  },
 
   updateVenue: (dto: VenueSettingsDto) =>
     apiClient.patch("/settings/venue", dto),
@@ -23,7 +30,7 @@ export const settingsApi = {
     apiClient.patch("/settings/booking-rules", dto),
 
   getHolidays: () =>
-    apiClient.get<Holiday[]>("/settings/holidays"),
+    apiClient.get<HolidayDto[]>("/settings/holidays"),
 
   addHoliday: (dto: HolidayDto) =>
     apiClient.post("/settings/holidays", dto),

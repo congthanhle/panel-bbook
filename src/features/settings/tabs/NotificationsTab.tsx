@@ -1,13 +1,59 @@
-import { Form, Card, Switch, Input, Button, Divider, Alert, Tag } from 'antd';
+import { useState, useEffect } from 'react';
+import { Form, Card, Switch, Input, Button, Divider, Alert, Tag, message } from 'antd';
 import { Mail, MessageSquare } from 'lucide-react';
+import { settingsApi } from '../api';
 
 const { TextArea } = Input;
 
 const NotificationsTab = () => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const handleFinish = (values: any) => {
-    console.log('Notification preferences saved:', values);
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await settingsApi.getAll();
+        const notif = data.notifications || {};
+        const triggers = notif.triggers || {};
+        
+        form.setFieldsValue({
+          emailEnabled: notif.emailEnabled ?? true,
+          smsEnabled: notif.smsEnabled ?? false,
+          triggerNewBooking: triggers.booking_created ?? true,
+          triggerCancellation: triggers.booking_cancelled ?? true,
+          triggerPayment: triggers.shift_assigned ?? true,
+          tplNewBooking: notif.tplNewBooking ?? 'Hi {{CustomerName}}, your booking for {{CourtName}} on {{Date}} at {{Time}} is confirmed. ID: {{BookingId}}',
+          tplCancellation: notif.tplCancellation ?? 'Hi {{CustomerName}}, your booking {{BookingId}} on {{Date}} at {{Time}} has been cancelled as requested.',
+          tplPayment: notif.tplPayment ?? 'Hi {{CustomerName}}, we have received your payment for {{BookingId}}. Thank you!',
+        });
+      } catch (err) {
+        message.error('Failed to load notification settings');
+      }
+    };
+    loadData();
+  }, [form]);
+
+  const handleFinish = async (values: any) => {
+    setLoading(true);
+    try {
+      await settingsApi.updateNotifications({
+        emailEnabled: values.emailEnabled,
+        smsEnabled: values.smsEnabled,
+        triggers: {
+          booking_created: values.triggerNewBooking,
+          booking_cancelled: values.triggerCancellation,
+          shift_assigned: values.triggerPayment,
+        },
+        tplNewBooking: values.tplNewBooking,
+        tplCancellation: values.tplCancellation,
+        tplPayment: values.tplPayment,
+      });
+      message.success('Notification preferences saved');
+    } catch {
+      message.error('Failed to save notification preferences');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const templateVariables = ['{{CustomerName}}', '{{CourtName}}', '{{Date}}', '{{Time}}', '{{BookingId}}'];
@@ -24,16 +70,6 @@ const NotificationsTab = () => {
         form={form}
         layout="vertical"
         onFinish={handleFinish}
-        initialValues={{
-          emailEnabled: true,
-          smsEnabled: false,
-          triggerNewBooking: true,
-          triggerCancellation: true,
-          triggerPayment: true,
-          tplNewBooking: 'Hi {{CustomerName}}, your booking for {{CourtName}} on {{Date}} at {{Time}} is confirmed. ID: {{BookingId}}',
-          tplCancellation: 'Hi {{CustomerName}}, your booking {{BookingId}} on {{Date}} at {{Time}} has been cancelled as requested.',
-          tplPayment: 'Hi {{CustomerName}}, we have received your payment for {{BookingId}}. Thank you!',
-        }}
       >
         <Card title="Channels" className="mb-6 shadow-sm border-slate-200" bordered={false}>
           <div className="flex flex-col gap-4">
@@ -128,8 +164,8 @@ const NotificationsTab = () => {
         </Card>
 
         <div className="flex justify-end gap-3 mt-8">
-          <Button size="large">Discard Changes</Button>
-          <Button type="primary" htmlType="submit" size="large">
+          <Button size="large" disabled={loading}>Discard Changes</Button>
+          <Button type="primary" htmlType="submit" size="large" loading={loading}>
             Save Notifications
           </Button>
         </div>

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Card, Button, InputNumber, Switch, Select, Divider, Alert, Typography, message } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import { settingsApi } from '../api';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -9,10 +10,28 @@ const BookingRulesTab = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const handleFinish = async (_values: any) => {
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await settingsApi.getAll();
+        form.setFieldsValue({
+          minAdvanceHours: data.bookingRules?.minAdvanceHours ?? 2,
+          maxAdvanceDays: data.bookingRules?.maxAdvanceDays ?? 30,
+          cancellationHours: data.bookingRules?.cancellationHours ?? 24,
+          autoLockFutureMonths: data.bookingRules?.autoLockFutureMonths ?? true,
+          defaultSlotDuration: data.bookingRules?.defaultSlotDuration ?? 60,
+        });
+      } catch (err) {
+        message.error('Failed to load booking rules');
+      }
+    };
+    loadData();
+  }, [form]);
+
+  const handleFinish = async (values: any) => {
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 700));
+      await settingsApi.updateBookingRules(values);
       message.success('Booking Rules saved successfully');
     } catch {
       message.error('Failed to save booking rules');
@@ -35,13 +54,6 @@ const BookingRulesTab = () => {
         form={form}
         layout="vertical"
         onFinish={handleFinish}
-        initialValues={{
-          minAdvanceHours: 2,
-          maxAdvanceDays: 30,
-          cancellationHours: 24,
-          autoLockMonths: true,
-          defaultDuration: 60,
-        }}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-6">
@@ -68,7 +80,7 @@ const BookingRulesTab = () => {
 
               <Form.Item 
                 label={<span className="font-medium text-slate-700">Default Slot Duration</span>}
-                name="defaultDuration"
+                name="defaultSlotDuration"
                 extra="Granularity of bookings on the frontend."
               >
                 <Select size="large">
@@ -100,7 +112,7 @@ const BookingRulesTab = () => {
                     Automatically lock the calendar beyond the maximum advance booking limit to prevent glitches or manual requests.
                   </Text>
                 </div>
-                <Form.Item name="autoLockMonths" valuePropName="checked" className="mb-0">
+                <Form.Item name="autoLockFutureMonths" valuePropName="checked" className="mb-0">
                   <Switch />
                 </Form.Item>
               </div>

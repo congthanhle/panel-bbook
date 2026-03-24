@@ -3,6 +3,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import { SlotCell, BulkActionPayload, Court, OperatingHours, Booking } from '@/types/overview.types';
 import { message } from 'antd';
 import { overviewApi, CreateBookingDto } from '@/features/overview/api';
+import { settingsApi } from '@/features/settings/api';
 
 interface CourtOverviewState {
   selectedDate: Dayjs;
@@ -148,13 +149,26 @@ export const useCourtOverviewStore = create<CourtOverviewState>((set, get) => ({
         });
       });
 
-      // Operating hours are required for the grid axes to generate. Since backend
-      // doesn't return this in getOverview, we define it based on generic business hours.
-      const operatingHours: OperatingHours = (response as any).operatingHours || {
-        openTime: '06:00',
-        closeTime: '22:00',
-        intervalMinutes: 30
+      const settings = await settingsApi.getAll();
+      const isWeekend = date.day() === 0 || date.day() === 6;
+      const realHours = settings.operatingHours;
+      const defaultDuration = settings.bookingRules?.defaultSlotDuration || 30;
+
+      const operatingHours: OperatingHours = {
+        openTime: (isWeekend ? realHours?.weekendOpen : realHours?.weekdayOpen) || '06:00',
+        closeTime: (isWeekend ? realHours?.weekendClose : realHours?.weekdayClose) || '22:00',
+        intervalMinutes: defaultDuration
       };
+
+      const holiday = (settings.holidays || []).find((h: any) => h.date === formattedDate);
+      if (holiday) {
+        Object.keys(flattenedSlots).forEach(key => {
+          if (flattenedSlots[key].status === 'available') {
+            flattenedSlots[key].status = 'locked';
+            flattenedSlots[key].lockedReason = holiday.name || 'Holiday Closure';
+          }
+        });
+      }
 
       set({
         slots: flattenedSlots,
